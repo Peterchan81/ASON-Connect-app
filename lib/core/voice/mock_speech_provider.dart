@@ -29,7 +29,10 @@ class MockSpeechProvider implements SpeechProvider {
   bool get isListening => _isListening;
 
   @override
-  Future<bool> initialize() async => true;
+  Future<bool> initialize({
+    void Function(String status)? onStatusChange,
+    void Function(String message, bool permanent)? onError,
+  }) async => true;
 
   @override
   Future<bool> startListening({

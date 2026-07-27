@@ -2,9 +2,10 @@
 // 서비스입니다. 실제 엔진(SpeechProvider)을 어떤 것으로 교체하더라도 화면 쪽 사용 방식은
 // 바뀌지 않습니다.
 //
-// 지금 단계에서는 화면(AsonConnectScreen)에 실제로 연결하지 않고, 구조와 동작만
-// MockSpeechProvider로 검증합니다. 다음 Sprint에서 실제로 교체할 때는
-// VoiceService(provider: SpeechRecognitionProvider())처럼 provider만 바꾸면 됩니다.
+// AsonConnectScreen은 VoiceService(provider: SpeechRecognitionProvider())로 실제 엔진에
+// 연결하고, 테스트는 MockSpeechProvider로 이 서비스의 상태 전이만 검증합니다.
+// 엔진이 비동기로 알려주는 상태 변화(예: 듣는 도중 스스로 멈춤)와 오류도 이 서비스가
+// 흡수해서 하나의 VoiceState로만 화면에 전달합니다.
 
 import 'package:flutter/foundation.dart';
 
@@ -36,7 +37,12 @@ class VoiceService {
     }
     if (state == VoiceState.processing) return;
 
-    final available = _provider.isAvailable || await _provider.initialize();
+    final available =
+        _provider.isAvailable ||
+        await _provider.initialize(
+          onStatusChange: _handleProviderStatus,
+          onError: _handleProviderError,
+        );
     if (!available) {
       stateNotifier.value = VoiceState.error;
       return;
@@ -60,6 +66,25 @@ class VoiceService {
 
   /// 대기 상태로 되돌립니다. (success 표시가 끝난 뒤 등)
   void reset() => stateNotifier.value = VoiceState.idle;
+
+  /// 엔진이 스스로 알려주는 상태 변화입니다. 사용자가 멈춤 버튼을 누르지 않아도
+  /// 엔진이 알아서 듣기를 멈추는 경우(무음 타임아웃 등), 최종 결과가 오기 전까지
+  /// 잠깐 "처리 중" 표시를 보여줍니다.
+  void _handleProviderStatus(String status) {
+    if (status == 'listening') {
+      stateNotifier.value = VoiceState.listening;
+      return;
+    }
+    if ((status == 'notListening' || status == 'done') &&
+        state == VoiceState.listening) {
+      stateNotifier.value = VoiceState.processing;
+    }
+  }
+
+  /// 엔진 오류입니다. 오류 메시지 자체는 화면에 노출하지 않고, 오류 상태로만 전환합니다.
+  void _handleProviderError(String message, bool permanent) {
+    stateNotifier.value = VoiceState.error;
+  }
 
   void dispose() {
     _provider.dispose();

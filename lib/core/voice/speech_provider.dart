@@ -17,7 +17,12 @@ abstract class SpeechProvider {
   bool get isListening;
 
   /// 사용 준비를 합니다. (마이크 권한 요청 등) 실패하면 false를 돌려줍니다.
-  Future<bool> initialize();
+  /// onStatusChange/onError는 엔진이 비동기로 알려주는 상태·오류를 그대로 전달받고
+  /// 싶을 때 사용합니다. (예: 듣는 도중 엔진이 스스로 멈추거나 오류가 나는 경우)
+  Future<bool> initialize({
+    void Function(String status)? onStatusChange,
+    void Function(String message, bool permanent)? onError,
+  });
 
   /// 듣기를 시작합니다. 인식 결과(중간/최종)는 onResult로 전달됩니다.
   /// 이미 듣는 중이거나 사용할 수 없으면 false를 돌려줍니다.

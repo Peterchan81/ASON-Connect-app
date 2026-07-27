@@ -2,8 +2,8 @@
 // 맞춰주는 어댑터입니다. 이 어댑터가 있어서 VoiceService는 실제 엔진이
 // speech_to_text인지, 나중에 다른 엔진인지 몰라도 됩니다.
 //
-// 지금 단계에서는 화면에 실제로 연결하지 않고(AsonConnectScreen은 기존 방식을 그대로
-// 사용합니다), 구조상 교체 가능함을 보여주기 위한 어댑터만 준비해 둡니다.
+// AsonConnectScreen이 실제로 사용하는 프로덕션 어댑터입니다.
+// (VoiceService(provider: SpeechRecognitionProvider())로 연결됩니다)
 
 import 'package:flutter/foundation.dart';
 
@@ -24,12 +24,13 @@ class SpeechRecognitionProvider implements SpeechProvider {
   bool get isListening => _service.isListening;
 
   @override
-  Future<bool> initialize() {
-    // 상세 상태/오류 콜백이 필요하면 다음 Sprint에서 SpeechProvider 인터페이스에
-    // 콜백을 추가해 확장할 수 있습니다. 지금은 성공 여부만 필요합니다.
+  Future<bool> initialize({
+    void Function(String status)? onStatusChange,
+    void Function(String message, bool permanent)? onError,
+  }) {
     return _service.initialize(
-      onStatusChange: (status) {},
-      onError: (message, permanent) {},
+      onStatusChange: onStatusChange ?? (status) {},
+      onError: onError ?? (message, permanent) {},
     );
   }
 
