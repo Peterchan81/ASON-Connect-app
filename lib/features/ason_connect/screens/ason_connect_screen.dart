@@ -43,26 +43,13 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
   Timer? _successResetTimer;
 
   @override
-  void initState() {
-    super.initState();
-    // VoiceService의 상태(VoiceState)가 바뀔 때마다 화면을 다시 그립니다.
-    _voiceService.stateNotifier.addListener(_handleVoiceStateChanged);
-  }
-
-  @override
   void dispose() {
     // 화면이 사라질 때는 진행 중인 음성 인식을 반드시 정리합니다.
-    _voiceService.stateNotifier.removeListener(_handleVoiceStateChanged);
     _voiceService.dispose();
     _successResetTimer?.cancel();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _handleVoiceStateChanged() {
-    if (!mounted) return;
-    setState(() {});
   }
 
   VoiceMicPhase _micPhaseFor(VoiceState state) {
@@ -170,12 +157,12 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
   void _handleSpeechResult(String recognizedText, bool isFinal) {
     if (!mounted) return;
 
-    setState(() {
-      _textController.text = recognizedText;
-      _textController.selection = TextSelection.collapsed(
-        offset: recognizedText.length,
-      );
-    });
+    // TextField가 controller 변화를 직접 구독하므로, 인식 중간 결과 표시는
+    // 화면 전체를 다시 그리는 setState 없이 controller만 갱신하면 됩니다.
+    _textController.text = recognizedText;
+    _textController.selection = TextSelection.collapsed(
+      offset: recognizedText.length,
+    );
 
     if (!isFinal) return;
 
@@ -281,15 +268,22 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOutCubic,
                   alignment: Alignment.topCenter,
-                  child: InputArea(
-                    inputMode: _inputMode,
-                    onModeSelected: _selectInputMode,
-                    controller: _textController,
-                    onSend: _handleSend,
-                    micPhase: _micPhaseFor(_voiceService.state),
-                    onMicPressed: _onMicPressed,
-                    onToggleMode: _toggleInputMode,
-                    isSyncing: isSyncing,
+                  // 음성 상태(듣는 중/처리 중 등)는 이 부분에만 영향을 주므로,
+                  // 화면 전체가 아니라 여기만 다시 그리도록 범위를 좁힙니다.
+                  child: ValueListenableBuilder<VoiceState>(
+                    valueListenable: _voiceService.stateNotifier,
+                    builder: (context, voiceState, _) {
+                      return InputArea(
+                        inputMode: _inputMode,
+                        onModeSelected: _selectInputMode,
+                        controller: _textController,
+                        onSend: _handleSend,
+                        micPhase: _micPhaseFor(voiceState),
+                        onMicPressed: _onMicPressed,
+                        onToggleMode: _toggleInputMode,
+                        isSyncing: isSyncing,
+                      );
+                    },
                   ),
                 ),
               ],

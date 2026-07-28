@@ -136,7 +136,7 @@ class SummaryCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           SizedBox(
-            width: 48,
+            width: 56,
             child: Text(
               label,
               maxLines: 1,
