@@ -66,11 +66,20 @@ class _SplashScanPainter extends CustomPainter {
 
   void _paintCircuitLines(Canvas canvas, Size size) {
     final linePaint = Paint()
-      ..color = AsonColors.primary.withValues(alpha: 0.14)
+      ..color = AsonColors.primary.withValues(alpha: 0.16)
       ..strokeWidth = 1.1
       ..style = PaintingStyle.stroke;
     final nodePaint = Paint()
-      ..color = AsonColors.primary.withValues(alpha: 0.4);
+      ..color = AsonColors.primary.withValues(alpha: 0.42);
+
+    void trace(List<Offset> points) {
+      final path = Path()..moveTo(points.first.dx, points.first.dy);
+      for (final point in points.skip(1)) {
+        path.lineTo(point.dx, point.dy);
+      }
+      canvas.drawPath(path, linePaint);
+      canvas.drawCircle(points.last, 2.2, nodePaint);
+    }
 
     final topRight = Path()
       ..moveTo(size.width * 0.66, size.height * 0.03)
@@ -93,6 +102,30 @@ class _SplashScanPainter extends CustomPainter {
       2.2,
       nodePaint,
     );
+
+    // 화면 좌우 가장자리를 따라 내려가는 세로 회로선(PCB Trace)입니다.
+    trace([
+      Offset(size.width * 0.045, size.height * 0.14),
+      Offset(size.width * 0.045, size.height * 0.30),
+      Offset(size.width * 0.09, size.height * 0.30),
+      Offset(size.width * 0.09, size.height * 0.40),
+    ]);
+    trace([
+      Offset(size.width * 0.955, size.height * 0.18),
+      Offset(size.width * 0.955, size.height * 0.36),
+      Offset(size.width * 0.90, size.height * 0.36),
+      Offset(size.width * 0.90, size.height * 0.46),
+    ]);
+    trace([
+      Offset(size.width * 0.06, size.height * 0.56),
+      Offset(size.width * 0.06, size.height * 0.70),
+      Offset(size.width * 0.12, size.height * 0.70),
+    ]);
+    trace([
+      Offset(size.width * 0.94, size.height * 0.58),
+      Offset(size.width * 0.94, size.height * 0.74),
+      Offset(size.width * 0.88, size.height * 0.74),
+    ]);
   }
 
   void _paintParticles(Canvas canvas, Size size) {
@@ -103,7 +136,7 @@ class _SplashScanPainter extends CustomPainter {
       ..color = AsonColors.primary.withValues(alpha: 0.4)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
 
-    for (var i = 0; i < 26; i++) {
+    for (var i = 0; i < 40; i++) {
       final position = Offset(
         random.nextDouble() * size.width,
         random.nextDouble() * size.height,
@@ -199,13 +232,23 @@ class _BottomGridPainter extends CustomPainter {
     final fanPaint = Paint()
       ..color = AsonColors.primary.withValues(alpha: 0.10)
       ..strokeWidth = 1;
-    for (final xFraction in [0.08, 0.28, 0.5, 0.72, 0.92]) {
+    for (final xFraction in [0.04, 0.2, 0.36, 0.5, 0.64, 0.8, 0.96]) {
       canvas.drawLine(
         Offset(size.width * xFraction, size.height),
         vanishingPoint,
         fanPaint,
       );
     }
+
+    // 그리드가 모이는 지점에서 강하게 번지는 광원(플레어)입니다.
+    final flarePaint = Paint()
+      ..color = AsonColors.primary.withValues(alpha: 0.8)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height * 0.97),
+      size.width * 0.10,
+      flarePaint,
+    );
 
     final random = math.Random(3);
     final dotPaint = Paint()..color = AsonColors.primary.withValues(alpha: 0.5);

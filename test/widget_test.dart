@@ -84,11 +84,12 @@ void main() {
     await tester.pumpWidget(const AsonVoiceApp());
     await tester.pump();
 
-    // "ASON" 로고는 Glow용 레이어 + 그라디언트 레이어, 두 겹의 Text로 그려집니다.
-    expect(find.text('ASON'), findsNWidgets(2));
+    // "ASON" 로고는 Glow 2겹 + 그라디언트 외곽선 1겹, 세 겹의 Text로 그려집니다.
+    expect(find.text('ASON'), findsNWidgets(3));
     expect(find.text('CONNECT'), findsOneWidget);
     expect(find.text('잠시 후 시작됩니다.'), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
+    // 카운트다운 숫자도 Glow 레이어 + 그라디언트 외곽선 레이어, 두 겹입니다.
+    expect(find.text('3'), findsNWidgets(2));
 
     await tester.pump(const Duration(seconds: 3));
     await _settle(tester);
