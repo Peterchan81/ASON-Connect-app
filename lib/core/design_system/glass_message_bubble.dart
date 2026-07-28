@@ -84,7 +84,7 @@ class _GlassMessageBubbleState extends State<GlassMessageBubble>
     final bubble = Container(
       padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
       decoration: BoxDecoration(
-        color: (isUser ? AsonColors.surfaceNavyLight : AsonColors.surfaceNavy)
+        color: (isUser ? AsonColors.userBubble : AsonColors.surfaceNavy)
             .withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(

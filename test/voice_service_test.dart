@@ -77,7 +77,10 @@ class _UnavailableSpeechProvider implements SpeechProvider {
   bool get isListening => false;
 
   @override
-  Future<bool> initialize() async => false;
+  Future<bool> initialize({
+    void Function(String status)? onStatusChange,
+    void Function(String message, bool permanent)? onError,
+  }) async => false;
 
   @override
   Future<bool> startListening({

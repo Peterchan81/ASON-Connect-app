@@ -138,6 +138,12 @@ class KoreanLocationService {
     '[가-힣A-Za-z0-9]{1,8}(?:${[..._adminSuffixes, ..._landmarkSuffixes].join('|')})',
   );
 
+  // 이름 없이 "병원"/"카페"처럼 종류만 언급된 경우를 찾습니다. 앞뒤에 한글이
+  // 붙어 있으면(예: "지역"의 "역") 오탐이므로 제외합니다.
+  static final RegExp _bareLandmarkPattern = RegExp(
+    '(?<![가-힣])(${_landmarkSuffixes.join('|')})(?![가-힣])',
+  );
+
   // 장소 뒤에 붙어도 장소의 일부로 유지할 표현입니다. (근처/앞/안/주변)
   static final RegExp _proximityPattern = RegExp(r'^\s*(근처|앞|안|주변)');
 
@@ -240,6 +246,14 @@ class KoreanLocationService {
       return (stem, guess);
     }
     return null;
+  }
+
+  /// 확실한 장소도, 되물을 만한 동네도 아니지만 "병원"처럼 종류만 언급된 경우
+  /// 그 단어를 그대로 돌려줍니다. (예: "병원 예약" -> "병원"). 그런 표현이 없으면 null.
+  String? findGenericLandmark(String text) {
+    final normalized = fixSpacingArtifacts(text);
+    if (_findConfidentLocation(normalized) != null) return null;
+    return _bareLandmarkPattern.firstMatch(normalized)?.group(1);
   }
 
   /// 광역 지역명 표현을 표준 축약형으로 정규화합니다. (예: "제주도" -> "제주")

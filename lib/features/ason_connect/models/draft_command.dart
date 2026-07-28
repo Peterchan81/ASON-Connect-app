@@ -29,6 +29,22 @@ extension DraftCommandCategoryLabel on DraftCommandCategory {
         return '할 일';
     }
   }
+
+  /// 저장이 끝났을 때 자연스럽게 보여줄 완료 문구입니다.
+  String get savedMessage {
+    switch (this) {
+      case DraftCommandCategory.schedule:
+        return '일정을 저장했습니다.';
+      case DraftCommandCategory.memo:
+        return '저장 완료';
+      case DraftCommandCategory.health:
+        return '건강 기록을 저장했습니다.';
+      case DraftCommandCategory.project:
+        return '프로젝트를 저장했습니다.';
+      case DraftCommandCategory.todo:
+        return '할 일을 저장했습니다.';
+    }
+  }
 }
 
 /// 현재 내용이 어느 단계까지 진행되었는지를 나타냅니다.
@@ -58,6 +74,9 @@ class DraftCommand {
     this.memo,
     this.pendingLocationGuess,
     this.pendingLocationOriginal,
+    this.memoType,
+    this.projectAction,
+    this.progress,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : createdAt = createdAt ?? DateTime.now(),
@@ -105,6 +124,15 @@ class DraftCommand {
   /// 장소가 불확실할 때, 사용자가 실제로 말한 표현입니다. (예: "둔산")
   final String? pendingLocationOriginal;
 
+  /// 메모의 종류입니다. (memo 카테고리에서만 사용) 예: "일반", "아이디어"
+  final String? memoType;
+
+  /// 프로젝트에 대해 하려는 활동입니다. (project 카테고리에서만 사용) 예: "생성", "수정", "삭제"
+  final String? projectAction;
+
+  /// 프로젝트 진행률입니다. (project 카테고리에서만 사용) 예: "60%"
+  final String? progress;
+
   /// 이 내용을 처음 만든 시각입니다. copyWith로도 바뀌지 않습니다.
   final DateTime createdAt;
 
@@ -126,6 +154,9 @@ class DraftCommand {
     String? memo,
     String? pendingLocationGuess,
     String? pendingLocationOriginal,
+    String? memoType,
+    String? projectAction,
+    String? progress,
     bool clearPendingLocation = false,
   }) {
     return DraftCommand(
@@ -147,6 +178,9 @@ class DraftCommand {
       pendingLocationOriginal: clearPendingLocation
           ? null
           : (pendingLocationOriginal ?? this.pendingLocationOriginal),
+      memoType: memoType ?? this.memoType,
+      projectAction: projectAction ?? this.projectAction,
+      progress: progress ?? this.progress,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );

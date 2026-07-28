@@ -16,6 +16,9 @@ class AsonColors {
   static const Color surfaceNavy = Color(0xFF121A2E);
   static const Color surfaceNavyLight = Color(0xFF1B2438);
 
+  /// 사용자 말풍선 배경입니다. 다른 표면색보다 파란빛이 뚜렷하도록 별도로 둡니다.
+  static const Color userBubble = Color(0xFF15304F);
+
   static const Color black = Color(0xFF000000);
   static const Color white = Color(0xFFFFFFFF);
 
