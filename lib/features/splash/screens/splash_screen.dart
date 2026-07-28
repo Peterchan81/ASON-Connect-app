@@ -11,6 +11,7 @@ import '../../ason_connect/screens/ason_connect_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/services/auth_service.dart';
 import '../widgets/countdown_hud.dart';
+import '../widgets/splash_neon_backdrop.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -79,74 +80,72 @@ class _SplashScreenState extends State<SplashScreen> {
       animateBackground: true,
       body: Stack(
         children: [
+          // 시작 화면 전용 네온 밀도 강화 배경입니다. (CyberBackground 위에 겹칩니다)
+          const Positioned.fill(
+            child: IgnorePointer(child: SplashNeonBackdrop()),
+          ),
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
+                final height = constraints.maxHeight;
+                final width = constraints.maxWidth;
+                // 844(일반적인 세로 스마트폰 높이) 기준 비율로 크기를 늘리고
+                // 줄입니다. 화면이 아주 작거나 커도 요소가 과하게 작아지거나
+                // 커지지 않도록 범위를 제한합니다.
+                final scale = (height / 844).clamp(0.72, 1.08);
+                final characterRingSize = (height * 0.30).clamp(168.0, 288.0);
+                final characterImageSize = characterRingSize * 0.7;
+                final countdownSize = (height * 0.16).clamp(88.0, 132.0);
+
                 // 작은 화면(작은 스마트폰, 세로로 좁은 Chrome 창)에서도 내용이
                 // 잘리지 않도록, 화면보다 내용이 커지면 스크롤로 전환합니다.
                 return SingleChildScrollView(
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints: BoxConstraints(minHeight: height),
                     child: IntrinsicHeight(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const AsonLogoHeader(),
-                            const SizedBox(height: 24),
-                            CharacterGlow(
-                              child: Image.asset(
-                                'assets/images/ason_character.png',
-                                height: 200,
-                                fit: BoxFit.contain,
-                              ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: width <= 360 ? 22.0 : 30.0,
                             ),
-                            const SizedBox(height: 24),
-                            Text.rich(
-                              TextSpan(
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  height: 1.6,
-                                  color: Colors.white.withValues(alpha: 0.78),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(height: 8 * scale),
+                                AsonLogoHeader(
+                                  asonFontSize: (34 * scale).clamp(28.0, 40.0),
                                 ),
-                                children: [
-                                  const TextSpan(text: '말하거나 입력하면\n'),
-                                  TextSpan(
-                                    text: 'ASON',
-                                    style: TextStyle(
-                                      color: AsonColors.primary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                SizedBox(height: 20 * scale),
+                                CharacterGlow(
+                                  size: characterRingSize,
+                                  child: Image.asset(
+                                    'assets/images/ason_character.png',
+                                    height: characterImageSize,
+                                    fit: BoxFit.contain,
                                   ),
-                                  const TextSpan(text: '이 내용을 정리하여\n통합 시스템에 '),
-                                  TextSpan(
-                                    text: '공유',
-                                    style: TextStyle(
-                                      color: AsonColors.primary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                ),
+                                SizedBox(height: 16 * scale),
+                                _SplashDescription(scale: scale),
+                                SizedBox(height: 18 * scale),
+                                CountdownHud(
+                                  secondsLeft: _secondsLeft,
+                                  totalSeconds: _totalSeconds,
+                                  size: countdownSize,
+                                ),
+                                SizedBox(height: 10 * scale),
+                                Text(
+                                  '잠시 후 시작됩니다.',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white.withValues(alpha: 0.55),
                                   ),
-                                  const TextSpan(text: '합니다.'),
-                                ],
-                              ),
-                              textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 20 * scale),
+                              ],
                             ),
-                            const Spacer(),
-                            CountdownHud(
-                              secondsLeft: _secondsLeft,
-                              totalSeconds: _totalSeconds,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              '잠시 후 시작됩니다.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withValues(alpha: 0.55),
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -155,29 +154,52 @@ class _SplashScreenState extends State<SplashScreen> {
               },
             ),
           ),
-          // 화면 하단의 오렌지 네온 라인 장식입니다.
-          Positioned(
-            left: 48,
-            right: 48,
+          // 화면 하단의 오렌지 네온 광원 + 곡선 장식입니다.
+          const Positioned(
+            left: 0,
+            right: 0,
             bottom: 0,
-            child: IgnorePointer(
-              child: Container(
-                height: 2,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      AsonColors.primary.withValues(alpha: 0.85),
-                      Colors.transparent,
-                    ],
-                  ),
-                  boxShadow: AsonGlow.of(AsonColors.primary, blur: 14, opacity: 0.6),
-                ),
-              ),
-            ),
+            height: 130,
+            child: IgnorePointer(child: SplashBottomGlow()),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 캐릭터 바로 아래에 표시하는 세 줄 안내 문구입니다.
+class _SplashDescription extends StatelessWidget {
+  const _SplashDescription({required this.scale});
+
+  final double scale;
+
+  @override
+  Widget build(BuildContext context) {
+    final fontSize = (19 * scale).clamp(16.0, 21.0);
+    return Text.rich(
+      TextSpan(
+        style: TextStyle(
+          fontSize: fontSize,
+          height: 1.7,
+          fontWeight: FontWeight.w600,
+          color: Colors.white.withValues(alpha: 0.92),
+        ),
+        children: [
+          const TextSpan(text: '말하거나 입력하면\n'),
+          TextSpan(
+            text: 'ASON',
+            style: TextStyle(color: AsonColors.primary, fontWeight: FontWeight.w800),
+          ),
+          const TextSpan(text: '이 내용을 정리하여\n통합 시스템에 '),
+          TextSpan(
+            text: '공유',
+            style: TextStyle(color: AsonColors.primary, fontWeight: FontWeight.w800),
+          ),
+          const TextSpan(text: '합니다.'),
+        ],
+      ),
+      textAlign: TextAlign.center,
     );
   }
 }
