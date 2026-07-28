@@ -11,10 +11,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('음성으로 말한 문장이 VoiceService -> ConversationManager -> BrainEngine을 거쳐'
-      ' 일정 draft로 만들어진다', () async {
+      ' 일정 draft로 만들어진다 ("내일 병원 예약" -> 언제/어느 병원/알림 순서로 되묻는다)', () async {
     final voice = VoiceService(
       provider: MockSpeechProvider(
-        scriptedText: '내일 오후 3시에 병원 예약',
+        scriptedText: '내일 병원 예약',
         respondAfter: const Duration(milliseconds: 10),
       ),
     );
@@ -27,34 +27,44 @@ void main() {
       },
     );
     await Future<void>.delayed(const Duration(milliseconds: 30));
+    voice.dispose();
 
     expect(voice.state, VoiceState.success);
 
-    final draft = manager.currentDraft;
+    var draft = manager.currentDraft;
     expect(draft?.category, DraftCommandCategory.schedule);
     expect(draft?.date, '내일');
-    expect(draft?.time, '오후 3시');
     expect(draft?.title, '병원 예약');
-    // 알림만 남아, 곧바로 다음 질문(알림 확인)으로 이어진다.
     expect(draft?.status, DraftCommandStatus.collecting);
+    expect(manager.messages.last.text, '몇 시 일정인가요?');
+
+    manager.handleUserText('오후 3시', inputSource: InputSource.voice);
+    expect(manager.messages.last.text, '어느 병원인가요?');
+
+    manager.handleUserText('대전성모병원', inputSource: InputSource.voice);
     expect(
       manager.messages.last.text,
       '일정을 확인했습니다.\n알림을 설정하시겠습니까?\n예: 30분 전 알림',
     );
 
-    voice.dispose();
+    manager.handleUserText('30분 전', inputSource: InputSource.voice);
+    draft = manager.currentDraft;
+    expect(draft?.status, DraftCommandStatus.ready);
+    expect(draft?.location, '대전성모병원');
+    expect(draft?.alarm, '30분 전');
+    expect(manager.messages.last.text, '일정을 저장했습니다.');
   });
 
   test('음성 인식 결과가 이어지면 알림 답변까지 처리되어 Summary/Sync가 준비된다', () async {
     final manager = ConversationManager();
 
-    manager.handleUserText('내일 오후 3시에 병원 예약', inputSource: InputSource.voice);
+    manager.handleUserText('내일 오후 3시에 팀 회의', inputSource: InputSource.voice);
     manager.handleUserText('없음', inputSource: InputSource.voice);
 
     expect(manager.currentDraft?.status, DraftCommandStatus.ready);
     expect(manager.isSummaryAvailable, isTrue);
     expect(manager.syncPreview, isNotNull);
-    expect(manager.syncPreview?.content, '병원 예약');
+    expect(manager.syncPreview?.content, '팀 회의');
   });
 
   test('음성 입력으로 건강/메모/프로젝트도 같은 파이프라인으로 곧바로 처리된다', () {

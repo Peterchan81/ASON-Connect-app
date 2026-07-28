@@ -24,6 +24,7 @@ import 'handlers/editing_handler.dart';
 import 'handlers/fallback_handler.dart';
 import 'handlers/new_topic_handler.dart';
 import 'handlers/schedule_continuation_handler.dart';
+import 'handlers/simple_continuation_handler.dart';
 import 'models/brain_input.dart';
 import 'models/brain_result.dart';
 import 'models/brain_turn_type.dart';
@@ -76,6 +77,7 @@ class BrainEngine {
             ConfirmationHandler(),
             EditingHandler(),
             ScheduleContinuationHandler(),
+            SimpleContinuationHandler(),
             NewTopicHandler(),
           ],
     );

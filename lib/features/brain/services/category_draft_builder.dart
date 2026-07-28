@@ -1,6 +1,9 @@
 // 카테고리가 확정된 순간(새 분류든, 애매함을 해소한 뒤든) 실제 DraftCommand를
 // 만들기 시작하는 로직입니다. NewTopicHandler(새 분류)와 ConfirmationHandler(애매함
 // 해소)가 똑같이 필요로 하는 절차라서, 두 Handler가 함께 재사용하도록 이 곳에 모았습니다.
+//
+// 일정 외의 카테고리도 실제 사람과 대화하듯, 꼭 필요한 내용이 빠졌으면 곧바로
+// 저장하지 않고 한 가지씩 되물은 뒤(status=collecting) 저장합니다.
 
 import '../../ason_connect/models/chat_message.dart' show ChatMessageType;
 import '../../ason_connect/models/draft_command.dart';
@@ -14,7 +17,14 @@ import 'brain_result_composer.dart';
 class CategoryDraftBuilder {
   const CategoryDraftBuilder();
 
-  static const String _readyReplyText = 'ASON에 다음 내용만 동기화합니다.';
+  // 항목은 알아냈지만 값(수치/이름)이 빠진 건강 기록을 이어서 물어볼 때 쓰는 문구입니다.
+  static const Map<String, String> _healthFollowUpQuestions = {
+    '체중': '몸무게를 알려주세요. (예: 68kg)',
+    '혈압': '혈압 수치를 알려주세요. (예: 128/82)',
+    '혈당': '혈당 수치를 알려주세요.',
+    '운동': '얼마나 운동하셨나요? (예: 30분)',
+    '복용': '어떤 약을 드셨나요?',
+  };
 
   BrainResult begin(
     BrainContext context,
@@ -69,8 +79,11 @@ class CategoryDraftBuilder {
       return BrainResultComposer.compose(
         context: context,
         draft: draft,
-        messages: const [
-          BrainMessage(_readyReplyText, type: ChatMessageType.summary),
+        messages: [
+          BrainMessage(
+            DraftCommandCategory.schedule.savedMessage,
+            type: ChatMessageType.summary,
+          ),
         ],
         turnType: BrainTurnType.newTopic,
         changedFields: _changedFields(entities),
@@ -101,18 +114,37 @@ class CategoryDraftBuilder {
     IntentResult? intent,
   }) {
     final entities = context.entityAnalyzer.extract(category, analysisText);
+    final hasTitle = (entities.title ?? '').trim().isNotEmpty;
+
     final draft = DraftCommand(
       originalText: rawText,
-      status: DraftCommandStatus.ready,
+      status: hasTitle
+          ? DraftCommandStatus.ready
+          : DraftCommandStatus.collecting,
       category: category,
       title: entities.title,
       memoType: entities.memoType,
     );
+
+    if (!hasTitle) {
+      return BrainResultComposer.compose(
+        context: context,
+        draft: draft,
+        messages: const [
+          BrainMessage('제목을 입력해주세요.', type: ChatMessageType.question),
+        ],
+        turnType: BrainTurnType.newTopic,
+        changedFields: _changedFields(entities),
+        intent: intent,
+        entities: entities,
+      );
+    }
+
     return BrainResultComposer.compose(
       context: context,
       draft: draft,
-      messages: const [
-        BrainMessage(_readyReplyText, type: ChatMessageType.summary),
+      messages: [
+        BrainMessage(category.savedMessage, type: ChatMessageType.summary),
       ],
       turnType: BrainTurnType.newTopic,
       changedFields: _changedFields(entities),
@@ -142,8 +174,11 @@ class CategoryDraftBuilder {
     return BrainResultComposer.compose(
       context: context,
       draft: draft,
-      messages: const [
-        BrainMessage(_readyReplyText, type: ChatMessageType.summary),
+      messages: [
+        BrainMessage(
+          DraftCommandCategory.project.savedMessage,
+          type: ChatMessageType.summary,
+        ),
       ],
       turnType: BrainTurnType.newTopic,
       changedFields: _changedFields(entities),
@@ -162,19 +197,41 @@ class CategoryDraftBuilder {
       DraftCommandCategory.health,
       analysisText,
     );
+    final hasValue = (entities.title ?? '').trim().isNotEmpty;
+
     final draft = DraftCommand(
       originalText: rawText,
-      status: DraftCommandStatus.ready,
+      status: hasValue
+          ? DraftCommandStatus.ready
+          : DraftCommandStatus.collecting,
       category: DraftCommandCategory.health,
       date: entities.date,
       healthItem: entities.healthItem,
       title: entities.title,
     );
+
+    if (!hasValue) {
+      final question =
+          _healthFollowUpQuestions[entities.healthItem] ?? '내용을 알려주세요.';
+      return BrainResultComposer.compose(
+        context: context,
+        draft: draft,
+        messages: [BrainMessage(question, type: ChatMessageType.question)],
+        turnType: BrainTurnType.newTopic,
+        changedFields: _changedFields(entities),
+        intent: intent,
+        entities: entities,
+      );
+    }
+
     return BrainResultComposer.compose(
       context: context,
       draft: draft,
-      messages: const [
-        BrainMessage(_readyReplyText, type: ChatMessageType.summary),
+      messages: [
+        BrainMessage(
+          DraftCommandCategory.health.savedMessage,
+          type: ChatMessageType.summary,
+        ),
       ],
       turnType: BrainTurnType.newTopic,
       changedFields: _changedFields(entities),

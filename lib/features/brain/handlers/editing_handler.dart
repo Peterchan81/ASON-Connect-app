@@ -58,8 +58,8 @@ class EditingHandler implements BrainTurnHandler {
       draft: ready,
       messages: [
         BrainMessage(changeMessage),
-        const BrainMessage(
-          'ASON에 다음 내용만 동기화합니다.',
+        BrainMessage(
+          ready.category!.savedMessage,
           type: ChatMessageType.summary,
         ),
       ],

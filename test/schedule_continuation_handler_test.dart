@@ -8,22 +8,27 @@ import 'package:ason_voice_app/features/brain/models/brain_turn_type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('시간/알림 배치 질문에 답하면 두 필드가 함께 채워지고 ready가 된다', () {
+  test('시간과 알림을 한 번에 하나씩 물어 채우고 ready가 된다', () {
     final engine = BrainEngine();
 
     final started = engine.process(BrainInput(text: '내일 둔산동에서 김 과장과 미팅'));
     expect(started.draft?.status, DraftCommandStatus.collecting);
     expect(started.missingFields, containsAll(['time', 'alarm']));
 
-    final continued = engine.process(
-      BrainInput(text: '오후 5시\n30분 전', draft: started.draft),
+    final afterTime = engine.process(
+      BrainInput(text: '오후 5시', draft: started.draft),
     );
+    expect(afterTime.draft?.time, '오후 5시');
+    expect(afterTime.draft?.status, DraftCommandStatus.collecting);
+    expect(afterTime.turnType, BrainTurnType.scheduleContinuation);
+    expect(afterTime.changedFields, ['time']);
 
-    expect(continued.draft?.time, '오후 5시');
-    expect(continued.draft?.alarm, '30분 전');
-    expect(continued.draft?.status, DraftCommandStatus.ready);
-    expect(continued.turnType, BrainTurnType.scheduleContinuation);
-    expect(continued.changedFields, containsAll(['time', 'alarm']));
+    final afterAlarm = engine.process(
+      BrainInput(text: '30분 전', draft: afterTime.draft),
+    );
+    expect(afterAlarm.draft?.alarm, '30분 전');
+    expect(afterAlarm.draft?.status, DraftCommandStatus.ready);
+    expect(afterAlarm.changedFields, ['alarm']);
   });
 
   test('불확실한 장소를 확인("네")하면 location이 채워진다', () {

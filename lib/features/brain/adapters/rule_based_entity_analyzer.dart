@@ -35,8 +35,9 @@ class RuleBasedEntityAnalyzer implements EntityAnalyzer {
           title: extracted.value,
         );
       case DraftCommandCategory.memo:
+        final isFiller = MemoClassifier.isGenericFiller(text);
         return EntityResult(
-          title: _parser.normalizeMemoContent(text),
+          title: isFiller ? null : _parser.normalizeMemoContent(text),
           memoType: MemoClassifier.classify(text),
         );
       case DraftCommandCategory.todo:

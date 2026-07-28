@@ -86,27 +86,31 @@ void main() {
     );
   });
 
-  testWidgets('일정 대화: 부족한 정보(시간/내용/알림)를 최대 3개까지 한 번에 묶어 질문한다', (
+  testWidgets('일정 대화: 부족한 정보(시간/내용/알림)를 사람처럼 한 번에 하나씩 묻는다', (
     WidgetTester tester,
   ) async {
     await _startChatInKeyboardMode(tester);
 
-    // 시간/내용/장소가 모두 없는 문장 -> 장소는 강제로 묻지 않고, 시간/내용/알림 3개를 묶어 질문합니다.
+    // 시간/내용/장소가 모두 없는 문장 -> 장소는 강제로 묻지 않고, 시간부터 하나씩 묻습니다.
     await _sendText(tester, '미팅 있어');
+    expect(find.text('몇 시 일정인가요?'), findsOneWidget);
+
+    await _sendText(tester, '오후 5시');
+    expect(find.text('일정 내용은 무엇인가요?'), findsOneWidget);
+
+    await _sendText(tester, '팀 회의');
     expect(
-      find.text(
-        '일정을 등록하기 위해\n다음 내용을 알려주세요.\n\n① 시간\n② 내용\n③ 알림 여부\n\n한 번에 답변하셔도 됩니다.',
-      ),
+      find.text('일정을 확인했습니다.\n알림을 설정하시겠습니까?\n예: 30분 전 알림'),
       findsOneWidget,
     );
 
-    // 사용자는 줄바꿈으로 구분해서 한 번에 모두 답합니다.
-    await _sendText(tester, '오후 5시\n팀 회의\n30분 전');
+    await _sendText(tester, '30분 전');
 
     expect(find.text('일정 요약'), findsOneWidget);
-    expect(find.text('오후 5시'), findsOneWidget);
-    expect(find.text('팀 회의'), findsOneWidget);
-    expect(find.text('30분 전'), findsOneWidget);
+    // "오후 5시"/"팀 회의"는 사용자의 답변 말풍선과 확인 카드 값에 모두 나타납니다.
+    expect(find.text('오후 5시'), findsWidgets);
+    expect(find.text('팀 회의'), findsWidgets);
+    expect(find.text('30분 전'), findsWidgets);
     expect(find.text('ASON에 동기화'), findsOneWidget);
   });
 
@@ -116,16 +120,13 @@ void main() {
     await _startChatInKeyboardMode(tester);
 
     await _sendText(tester, '오늘 둔산동에서 일정 있어.');
-    // 날짜/장소는 이미 알아냈으니 다시 묻지 않고, 시간/내용/알림을 묶어서 질문합니다.
-    expect(
-      find.text(
-        '일정을 등록하기 위해\n다음 내용을 알려주세요.\n\n① 시간\n② 내용\n③ 알림 여부\n\n한 번에 답변하셔도 됩니다.',
-      ),
-      findsOneWidget,
-    );
+    // 날짜/장소는 이미 알아냈으니 다시 묻지 않고, 시간부터 하나씩 묻습니다.
+    expect(find.text('몇 시 일정인가요?'), findsOneWidget);
 
-    // 시간/내용만 먼저 답하면, 알림은 남아 있으므로 마지막으로 한 번 더 확인합니다.
-    await _sendText(tester, '오후 3시\n김 과장과 미팅');
+    await _sendText(tester, '오후 3시');
+    expect(find.text('일정 내용은 무엇인가요?'), findsOneWidget);
+
+    await _sendText(tester, '김 과장과 미팅');
     expect(
       find.text('일정을 확인했습니다.\n알림을 설정하시겠습니까?\n예: 30분 전 알림'),
       findsOneWidget,
@@ -134,9 +135,9 @@ void main() {
     await _sendText(tester, '30분 전');
     expect(find.text('일정 요약'), findsOneWidget);
     expect(find.text('오늘 오후 3시'), findsOneWidget);
-    expect(find.text('김 과장과 미팅'), findsOneWidget);
+    // "김 과장과 미팅"/"30분 전"은 사용자의 답변 말풍선과 확인 카드 값에 모두 나타납니다.
+    expect(find.text('김 과장과 미팅'), findsWidgets);
     expect(find.text('대전 둔산동'), findsOneWidget);
-    // "30분 전"은 사용자의 답변 말풍선과 확인 카드의 알림 값, 두 곳에 모두 나타납니다.
     expect(find.text('30분 전'), findsWidgets);
     expect(find.text('ASON에 동기화'), findsOneWidget);
 

@@ -116,8 +116,11 @@ class ScheduleContinuationHandler implements BrainTurnHandler {
       return BrainResultComposer.compose(
         context: context,
         draft: ready,
-        messages: const [
-          BrainMessage('ASON에 다음 내용만 동기화합니다.', type: ChatMessageType.summary),
+        messages: [
+          BrainMessage(
+            ready.category!.savedMessage,
+            type: ChatMessageType.summary,
+          ),
         ],
         turnType: BrainTurnType.scheduleContinuation,
         changedFields: changedFields,

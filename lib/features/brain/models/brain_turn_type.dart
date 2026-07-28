@@ -11,6 +11,9 @@ enum BrainTurnType {
   /// 일정 정보 수집 중 후속 답변
   scheduleContinuation,
 
+  /// 메모/건강/프로젝트 등 일정 외 카테고리의 정보 수집 중 후속 답변
+  simpleContinuation,
+
   /// 수정 대화
   editing,
 

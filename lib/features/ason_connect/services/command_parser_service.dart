@@ -38,10 +38,14 @@ class CommandParserService {
   final FieldCorrectionParser _correctionParser;
 
   // 일정에서 "묶어서 질문"할 항목과 우선순위입니다.
-  // 날짜는 시간에 자연스럽게 포함되어 표시되므로 따로 묻지 않고,
-  // 장소는 문장에 표현이 있을 때만(불확실하면 되묻는 방식으로) 채워지므로
-  // 이 목록에는 넣지 않습니다. (필수: 시간, 내용 / 알림은 한 번만 제안)
-  static const List<String> scheduleFieldOrder = ['time', 'title', 'alarm'];
+  // 날짜는 시간에 자연스럽게 포함되어 표시되므로 따로 묻지 않습니다.
+  // (필수: 시간, 내용 / 장소는 "병원"처럼 종류만 언급됐을 때만 되물음 / 알림은 한 번만 제안)
+  static const List<String> scheduleFieldOrder = [
+    'time',
+    'title',
+    'location',
+    'alarm',
+  ];
 
   // 항목별 질문 문구입니다.
   static const Map<String, String> scheduleFieldQuestions = {
@@ -143,6 +147,13 @@ class CommandParserService {
   /// ASON은 이 목록을 한 번에 묶어서 질문합니다.
   List<String> allMissingScheduleFields(DraftCommand draft) {
     return scheduleFieldOrder.where((field) {
+      if (field == 'location') {
+        // 장소는 "병원"처럼 종류만 언급되어 되물어야 할 때만 missing으로 취급합니다.
+        // (아예 언급이 없으면 강제로 묻지 않습니다)
+        return draft.pendingLocationOriginal != null &&
+            draft.pendingLocationGuess == null &&
+            (draft.location ?? '').trim().isEmpty;
+      }
       final value = scheduleFieldValue(draft, field);
       return value == null || value.trim().isEmpty;
     }).toList();
@@ -161,6 +172,9 @@ class CommandParserService {
       final guess = draft.pendingLocationGuess!;
       return '$original${KoreanParticles.iRago(original)} 하신 장소가 '
           '$guess${KoreanParticles.iGa(guess)} 맞나요?';
+    }
+    if (field == 'location' && draft.pendingLocationOriginal != null) {
+      return '어느 ${draft.pendingLocationOriginal}인가요?';
     }
     return scheduleFieldQuestions[field] ?? '내용을 알려주세요.';
   }

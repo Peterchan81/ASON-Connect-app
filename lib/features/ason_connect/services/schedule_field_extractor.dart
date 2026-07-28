@@ -82,6 +82,10 @@ class ScheduleFieldExtractor {
     } else if (locationResult.isUncertain) {
       pendingGuess = locationResult.uncertainGuess;
       pendingOriginal = locationResult.uncertainOriginal;
+    } else {
+      // "병원 예약"처럼 장소의 종류만 언급되고 구체적인 이름이 없으면,
+      // 나중에 "어느 병원인가요?"라고 따로 물어볼 수 있도록 표시만 해 둡니다.
+      pendingOriginal = _locationService.findGenericLandmark(remaining);
     }
 
     final title = remaining

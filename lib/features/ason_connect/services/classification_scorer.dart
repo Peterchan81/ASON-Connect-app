@@ -48,6 +48,7 @@ class ClassificationScorer {
       '출장',
       '모임',
       '방문',
+      '예약',
     ],
     DraftCommandCategory.memo: ['메모', '기억', '적어', '기록', '사야', '구매'],
     DraftCommandCategory.health: [

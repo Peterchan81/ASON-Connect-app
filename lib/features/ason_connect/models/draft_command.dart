@@ -29,6 +29,22 @@ extension DraftCommandCategoryLabel on DraftCommandCategory {
         return '할 일';
     }
   }
+
+  /// 저장이 끝났을 때 자연스럽게 보여줄 완료 문구입니다.
+  String get savedMessage {
+    switch (this) {
+      case DraftCommandCategory.schedule:
+        return '일정을 저장했습니다.';
+      case DraftCommandCategory.memo:
+        return '저장 완료';
+      case DraftCommandCategory.health:
+        return '건강 기록을 저장했습니다.';
+      case DraftCommandCategory.project:
+        return '프로젝트를 저장했습니다.';
+      case DraftCommandCategory.todo:
+        return '할 일을 저장했습니다.';
+    }
+  }
 }
 
 /// 현재 내용이 어느 단계까지 진행되었는지를 나타냅니다.

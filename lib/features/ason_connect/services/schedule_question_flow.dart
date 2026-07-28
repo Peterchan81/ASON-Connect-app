@@ -6,7 +6,8 @@ import '../models/draft_command.dart';
 import 'command_parser_service.dart';
 
 class ScheduleQuestionFlow {
-  const ScheduleQuestionFlow({required this._parser, this._maxBatchSize = 3});
+  // 실제 사람과 대화하듯 한 번에 하나씩만 묻습니다.
+  const ScheduleQuestionFlow({required this._parser, this._maxBatchSize = 1});
 
   final CommandParserService _parser;
 
