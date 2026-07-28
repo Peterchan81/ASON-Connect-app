@@ -88,6 +88,16 @@ class _NeonAsonWordmark extends StatelessWidget {
               ..maskFilter = MaskFilter.blur(BlurStyle.normal, fontSize * 0.20),
           ),
         ),
+        // 글자 속을 아주 옅게 채워, 완전히 뚫린 구멍이 아니라 유리관 속처럼
+        // 은은하게 비치는 느낌을 냅니다.
+        Text(
+          'ASON',
+          style: baseStyle.copyWith(
+            foreground: Paint()
+              ..style = PaintingStyle.fill
+              ..color = AsonColors.primary.withValues(alpha: 0.14),
+          ),
+        ),
         Text(
           'ASON',
           style: baseStyle.copyWith(

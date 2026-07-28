@@ -212,6 +212,15 @@ class _NeonCountdownNumber extends StatelessWidget {
                 ),
             ),
           ),
+          // 숫자 속을 아주 옅게 채워 유리관 속처럼 비치는 느낌을 냅니다.
+          Text(
+            text,
+            style: baseStyle.copyWith(
+              foreground: Paint()
+                ..style = PaintingStyle.fill
+                ..color = AsonColors.primary.withValues(alpha: 0.16),
+            ),
+          ),
           ShaderMask(
             blendMode: BlendMode.srcIn,
             shaderCallback: (bounds) => const LinearGradient(
