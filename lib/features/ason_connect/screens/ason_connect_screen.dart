@@ -205,7 +205,7 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
         subtitle: 'Voice & Text Input',
         trailing: ConnectionStatus(
           label: _simulatedReady ? '연결 준비 완료' : '연결 대기 중',
-          color: _simulatedReady ? AsonColors.primary : AsonColors.error,
+          color: _simulatedReady ? AsonColors.success : AsonColors.error,
         ),
       ),
       body: SafeArea(
