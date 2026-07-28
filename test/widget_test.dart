@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ason_voice_app/app.dart';
 
@@ -46,6 +47,12 @@ Future<void> _sendText(WidgetTester tester, String text) async {
 }
 
 void main() {
+  setUp(() {
+    // ASON-Core 데이터 구조 동기화(core_sync)가 SharedPreferences를 사용하므로
+    // 위젯 테스트에서도 실제 플랫폼 채널 대신 메모리 목(mock)을 사용합니다.
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('Splash 화면이 표시된 뒤 3초 후 ASON Connect 화면(입력 방식 선택)으로 자동 전환된다', (
     WidgetTester tester,
   ) async {

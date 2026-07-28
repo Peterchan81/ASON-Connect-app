@@ -11,6 +11,7 @@
 
 import '../../brain/brain_engine.dart';
 import '../../brain/models/brain_input.dart';
+import '../../core_sync/services/core_sync_mapper.dart';
 import '../models/chat_message.dart';
 import '../models/draft_command.dart';
 import '../models/sync_payload.dart';
@@ -25,6 +26,7 @@ class ConversationManager {
     KoreanLocationService? locationService,
     MockSyncService? syncService,
     BrainEngine? brainEngine,
+    CoreSyncMapper? coreSyncMapper,
   }) {
     final resolvedLocationService = locationService ?? KoreanLocationService();
     final resolvedParser =
@@ -32,6 +34,7 @@ class ConversationManager {
         CommandParserService(locationService: resolvedLocationService);
     return ConversationManager._(
       syncService: syncService ?? MockSyncService(),
+      coreSyncMapper: coreSyncMapper ?? CoreSyncMapper(),
       brain:
           brainEngine ??
           BrainEngine(
@@ -41,11 +44,16 @@ class ConversationManager {
     );
   }
 
-  ConversationManager._({required this._syncService, required this._brain}) {
+  ConversationManager._({
+    required this._syncService,
+    required this._coreSyncMapper,
+    required this._brain,
+  }) {
     _addAson(_greetingText);
   }
 
   final MockSyncService _syncService;
+  final CoreSyncMapper _coreSyncMapper;
   final BrainEngine _brain;
   final SummaryBuilder _summaryBuilder = const SummaryBuilder();
 
@@ -146,11 +154,20 @@ class ConversationManager {
     final result = await _syncService.sync(payload);
 
     if (result.isSuccess) {
-      _draft = draft.copyWith(status: DraftCommandStatus.synced);
-      _addAson(
-        'ASON Core에 동기화할 준비가 완료되었습니다.',
-        type: ChatMessageType.syncComplete,
-      );
+      try {
+        // ASON-Core와 같은 저장 구조(SharedPreferences)에 실제로 반영합니다.
+        // 같은 draft(같은 createdAt)를 다시 동기화하면 같은 id로 덮어써서
+        // 중복 저장되지 않습니다.
+        await _coreSyncMapper.sync(draft);
+        _draft = draft.copyWith(status: DraftCommandStatus.synced);
+        _addAson(
+          'ASON Core에 동기화할 준비가 완료되었습니다.',
+          type: ChatMessageType.syncComplete,
+        );
+      } catch (_) {
+        _draft = draft.copyWith(status: DraftCommandStatus.ready);
+        _addAson('동기화 중 오류가 발생했습니다.', type: ChatMessageType.error);
+      }
     } else {
       _draft = draft.copyWith(status: DraftCommandStatus.ready);
       _addAson(
