@@ -1,15 +1,18 @@
-// ASON 캐릭터를 감싸는 오렌지 에너지 링입니다.
+// ASON 캐릭터를 감싸는 오렌지 네온 링입니다. (Design System 공통 컴포넌트)
 // 여러 겹의 얇은 동심원 + 방사형 눈금 + 회전하는 Sweep Glow를 겹쳐서,
 // 캐릭터가 에너지 포털 한가운데 서 있는 듯한 느낌을 만듭니다.
+// 시작 화면, 로그인 화면, 회원가입 화면이 모두 이 위젯을 공유합니다.
 
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../core/design_system/design_system.dart';
+import 'ason_colors.dart';
+import 'ason_glow.dart';
+import 'animated_glow_ring.dart';
 
-class EnergyRing extends StatelessWidget {
-  const EnergyRing({super.key, required this.child, this.size = 260});
+class CharacterGlow extends StatelessWidget {
+  const CharacterGlow({super.key, required this.child, this.size = 260});
 
   /// 링 중심에 놓일 위젯입니다. (ASON 캐릭터 이미지)
   final Widget child;

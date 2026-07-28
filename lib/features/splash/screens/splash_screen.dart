@@ -8,8 +8,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/design_system/design_system.dart';
 import '../../ason_connect/screens/ason_connect_screen.dart';
+import '../../auth/screens/login_screen.dart';
+import '../../auth/services/auth_service.dart';
 import '../widgets/countdown_hud.dart';
-import '../widgets/energy_ring.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -41,9 +42,28 @@ class _SplashScreenState extends State<SplashScreen> {
     setState(() => _secondsLeft -= 1);
   }
 
-  void _goNext() {
+  /// 저장된 로그인 상태를 확인한 뒤, 자동 로그인에 성공하면 메인 음성 화면으로,
+  /// 그렇지 않으면 로그인 화면으로 넘어갑니다. (뒤로 가기로 이 화면에 돌아오지
+  /// 못하도록 pushReplacement를 사용합니다)
+  Future<void> _goNext() async {
+    final result = await AuthService.instance.tryAutoLogin();
+    if (!mounted) return;
+
+    if (result.isSuccess) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const AsonConnectScreen()),
+      );
+      return;
+    }
+
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const AsonConnectScreen()),
+      MaterialPageRoute(
+        builder: (context) => LoginScreen(
+          initialMessage: result.isExpired
+              ? '로그인 정보가 만료되었습니다. 다시 로그인해주세요.'
+              : null,
+        ),
+      ),
     );
   }
 
@@ -73,9 +93,9 @@ class _SplashScreenState extends State<SplashScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const _AsonLogoLockup(),
+                            const AsonLogoHeader(),
                             const SizedBox(height: 24),
-                            EnergyRing(
+                            CharacterGlow(
                               child: Image.asset(
                                 'assets/images/ason_character.png',
                                 height: 200,
@@ -158,57 +178,6 @@ class _SplashScreenState extends State<SplashScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// 상단 "ASON / — CONNECT —" 로고 조합입니다.
-class _AsonLogoLockup extends StatelessWidget {
-  const _AsonLogoLockup();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const GlowText(
-          'ASON',
-          style: TextStyle(
-            fontSize: 42,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
-            letterSpacing: 1.5,
-          ),
-          glowStrength: 1.3,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _accentLine(),
-            const SizedBox(width: 10),
-            Text(
-              'CONNECT',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 4,
-                color: AsonColors.primary.withValues(alpha: 0.9),
-              ),
-            ),
-            const SizedBox(width: 10),
-            _accentLine(),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _accentLine() {
-    return Container(
-      width: 22,
-      height: 1,
-      color: AsonColors.primary.withValues(alpha: 0.5),
     );
   }
 }

@@ -5,11 +5,32 @@
 // 있어 pumpAndSettle()을 사용하면 타임아웃이 발생합니다. 대신 전환/등장 애니메이션이
 // 끝나기에 충분한 만큼만 정해진 시간으로 프레임을 진행하는 _settle()을 사용합니다.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ason_voice_app/app.dart';
+
+/// AuthService가 저장하는 형태와 동일한, 이미 로그인/자동 로그인된 상태입니다.
+/// 로그인 화면과 무관하게 대화 기능만 검증하는 기존 테스트들이 곧바로
+/// ASON Connect 화면으로 들어갈 수 있도록 사용합니다.
+Map<String, Object> _autoLoggedInPrefs() => {
+  'ason_is_logged_in': true,
+  'ason_auto_login_enabled': true,
+  'ason_user_id': 'test_user',
+  'ason_nickname': '테스트',
+  'ason_session_id': 'test_session',
+  'ason_accounts': jsonEncode([
+    {
+      'nickname': '테스트',
+      'id': 'test_user',
+      'email': 'test@ason.app',
+      'passwordHash': 'x',
+    },
+  ]),
+};
 
 Future<void> _settle(WidgetTester tester) async {
   for (var i = 0; i < 10; i++) {
@@ -31,6 +52,9 @@ void _usePhoneViewport(WidgetTester tester) {
 /// 저장하지 않으므로, 매번 새로 골라야 합니다.
 Future<void> _startChatInKeyboardMode(WidgetTester tester) async {
   _usePhoneViewport(tester);
+  // 로그인 화면을 거치지 않고 곧바로 대화 기능을 검증하기 위해, 이미
+  // 자동 로그인된 상태로 시작합니다.
+  SharedPreferences.setMockInitialValues(_autoLoggedInPrefs());
   await tester.pumpWidget(const AsonVoiceApp());
   await tester.pump();
   await tester.pump(const Duration(seconds: 3));
@@ -53,7 +77,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('Splash 화면이 표시된 뒤 3초 후 ASON Connect 화면(입력 방식 선택)으로 자동 전환된다', (
+  testWidgets('Splash 화면이 표시된 뒤 3초 후, 저장된 로그인 정보가 없으면 로그인 화면으로 이동한다', (
     WidgetTester tester,
   ) async {
     _usePhoneViewport(tester);
@@ -65,6 +89,22 @@ void main() {
     expect(find.text('잠시 후 시작됩니다.'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
 
+    await tester.pump(const Duration(seconds: 3));
+    await _settle(tester);
+
+    // 최초 실행(자동 로그인 정보 없음) -> ASON Connect 화면이 아니라 로그인 화면으로 이동합니다.
+    expect(find.text('ASON 시작하기'), findsOneWidget);
+    expect(find.text('로그인하고 나만의 ASON을 만나보세요.'), findsOneWidget);
+    expect(find.text('ASON Connect'), findsNothing);
+  });
+
+  testWidgets('자동 로그인 정보가 저장되어 있으면 로그인 화면을 건너뛰고 ASON Connect 화면으로 이동한다', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneViewport(tester);
+    SharedPreferences.setMockInitialValues(_autoLoggedInPrefs());
+    await tester.pumpWidget(const AsonVoiceApp());
+    await tester.pump();
     await tester.pump(const Duration(seconds: 3));
     await _settle(tester);
 

@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/design_system/design_system.dart';
 import '../../../core/voice/voice.dart';
+import '../../auth/screens/login_screen.dart';
+import '../../auth/services/auth_service.dart';
 import '../../brain/models/brain_input.dart' show InputSource;
 import '../models/draft_command.dart';
 import '../models/voice_mic_phase.dart';
@@ -130,6 +132,25 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
     _scrollToBottom();
   }
 
+  /// 자동 로그인 설정만 끕니다. 지금 세션은 그대로 유지됩니다.
+  Future<void> _handleDisableAutoLogin() async {
+    await AuthService.instance.disableAutoLogin();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('자동 로그인이 해제되었습니다.')),
+    );
+  }
+
+  /// 로그아웃합니다. 로그인 화면으로 돌아가면 뒤로 가기로 이 화면에 다시
+  /// 들어올 수 없도록 pushReplacement로 이동합니다.
+  Future<void> _handleLogout() async {
+    await AuthService.instance.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
   /// 새 내용 입력 버튼: 대화와 작성 중이던 내용을 모두 초기화합니다.
   /// 대화는 어디에도 저장하지 않으므로, 초기화하면 그대로 사라집니다.
   void _handleNewInput() {
@@ -203,9 +224,43 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
       appBar: CyberTopBar(
         title: 'ASON Connect',
         subtitle: 'Voice & Text Input',
-        trailing: ConnectionStatus(
-          label: _simulatedReady ? '연결 준비 완료' : '연결 대기 중',
-          color: _simulatedReady ? AsonColors.success : AsonColors.error,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConnectionStatus(
+              label: _simulatedReady ? '연결 준비 완료' : '연결 대기 중',
+              color: _simulatedReady ? AsonColors.success : AsonColors.error,
+            ),
+            const SizedBox(width: 4),
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                icon: Icon(
+                  Icons.account_circle_rounded,
+                  color: Colors.white.withValues(alpha: 0.7),
+                  size: 20,
+                ),
+                color: AsonColors.surfaceNavy,
+                onSelected: (value) {
+                  if (value == 'disable_auto_login') {
+                    _handleDisableAutoLogin();
+                  } else if (value == 'logout') {
+                    _handleLogout();
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (AuthService.instance.autoLoginEnabled)
+                    const PopupMenuItem(
+                      value: 'disable_auto_login',
+                      child: Text('자동 로그인 해제'),
+                    ),
+                  const PopupMenuItem(value: 'logout', child: Text('로그아웃')),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
       body: SafeArea(
