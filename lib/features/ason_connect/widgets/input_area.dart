@@ -9,6 +9,7 @@ import '../../../core/design_system/design_system.dart';
 import '../models/voice_mic_phase.dart';
 import 'mode_switch_button.dart';
 import 'text_input_panel.dart';
+import 'voice_input_card.dart';
 
 class InputArea extends StatelessWidget {
   const InputArea({
@@ -45,9 +46,21 @@ class InputArea extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+          padding: const EdgeInsets.fromLTRB(16, 13, 16, 10),
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeInOutCubic,
+            switchOutCurve: Curves.easeInOutCubic,
+            transitionBuilder: (child, animation) {
+              final slide = Tween<Offset>(
+                begin: const Offset(0, 0.18),
+                end: Offset.zero,
+              ).animate(animation);
+              return SlideTransition(
+                position: slide,
+                child: FadeTransition(opacity: animation, child: child),
+              );
+            },
             child: _buildContent(),
           ),
         ),
@@ -91,19 +104,7 @@ class InputArea extends StatelessWidget {
       key: const ValueKey('voice'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        VoiceOrb(state: _orbStateFor(micPhase), onTap: onMicPressed),
-        const SizedBox(height: 10),
-        Text(
-          micPhase.statusText,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 13,
-            height: 1.3,
-            color: micPhase == VoiceMicPhase.error
-                ? const Color(0xFFFF8A80)
-                : Colors.white.withValues(alpha: 0.45),
-          ),
-        ),
+        VoiceInputCard(phase: micPhase, onMicPressed: onMicPressed),
         const SizedBox(height: 6),
         ModeSwitchButton(toVoice: false, onPressed: onToggleMode),
       ],
@@ -120,20 +121,5 @@ class InputArea extends StatelessWidget {
         ModeSwitchButton(toVoice: true, onPressed: onToggleMode),
       ],
     );
-  }
-
-  VoiceOrbState _orbStateFor(VoiceMicPhase phase) {
-    switch (phase) {
-      case VoiceMicPhase.ready:
-        return VoiceOrbState.idle;
-      case VoiceMicPhase.listening:
-        return VoiceOrbState.listening;
-      case VoiceMicPhase.processing:
-        return VoiceOrbState.thinking;
-      case VoiceMicPhase.success:
-        return VoiceOrbState.success;
-      case VoiceMicPhase.error:
-        return VoiceOrbState.error;
-    }
   }
 }

@@ -50,7 +50,7 @@ class SummaryCard extends StatelessWidget {
     return GlowCard(
       glowColor: AsonColors.primary,
       glowOpacity: 0.26,
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: HudCornerOverlay(
         accentColor: AsonColors.primary,
         child: Column(
@@ -61,26 +61,26 @@ class SummaryCard extends StatelessWidget {
               children: [
                 Icon(
                   Icons.auto_awesome_rounded,
-                  size: 16,
+                  size: 14,
                   color: AsonColors.primary,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 5),
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AsonColors.primary,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 11),
             for (var i = 0; i < rows.length; i++) ...[
               _row(rows[i].key, rows[i].value),
               if (i != rows.length - 1)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Divider(
                     height: 1,
                     color: Colors.white.withValues(alpha: 0.08),
@@ -88,17 +88,17 @@ class SummaryCard extends StatelessWidget {
                 ),
             ],
             if (summaryLine != null && summaryLine!.trim().isNotEmpty) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
                 summaryLine!,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12.5,
                   height: 1.4,
                   color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ],
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
             Row(
               children: [
                 if (secondaryLabel != null && onSecondary != null) ...[
@@ -125,25 +125,25 @@ class SummaryCard extends StatelessWidget {
   Widget _row(String label, String value) {
     final icon = _fieldIcons[label] ?? Icons.label_important_rounded;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             icon,
-            size: 16,
+            size: 14,
             color: AsonColors.primary.withValues(alpha: 0.8),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 7),
           SizedBox(
-            width: 56,
+            width: 50,
             child: Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.visible,
               softWrap: false,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 11.5,
                 color: AsonColors.primary.withValues(alpha: 0.7),
               ),
             ),
@@ -151,7 +151,7 @@ class SummaryCard extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 15, color: Colors.white),
+              style: const TextStyle(fontSize: 13, color: Colors.white),
             ),
           ),
         ],

@@ -101,7 +101,9 @@ void main() {
   testWidgets('Splash 화면이 표시된 뒤 3초 후, 저장된 로그인 정보가 없으면 로그인 화면으로 이동한다', (
     WidgetTester tester,
   ) async {
-    await _seedAutoLogin();
+    // 저장된 자동 로그인 정보가 전혀 없는, 최초 실행 상태를 재현합니다.
+    SharedPreferences.setMockInitialValues({});
+    AuthService.instance.resetForTest();
     _usePhoneViewport(tester);
     await tester.pumpWidget(const AsonVoiceApp());
     await tester.pump();

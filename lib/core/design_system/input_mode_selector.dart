@@ -25,12 +25,12 @@ class InputModeSelector extends StatelessWidget {
           '입력 방식을 선택하세요.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 15.5,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 13),
         _ModeOption(
           icon: Icons.mic_rounded,
           title: '음성 입력',
@@ -38,7 +38,7 @@ class InputModeSelector extends StatelessWidget {
           color: AsonColors.primary,
           onTap: () => onSelected(AsonInputMode.voice),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 13),
         _ModeOption(
           icon: Icons.keyboard_alt_outlined,
           title: '키보드 입력',
@@ -67,11 +67,11 @@ class _ModeOption extends StatelessWidget {
   final VoidCallback onTap;
 
   // 음성/키보드 두 카드 모두 같은 치수를 사용해, 완전히 같은 비율로 보이게 합니다.
-  static const double _iconBoxSize = 60;
-  static const double _iconSize = 28;
-  static const double _titleSize = 17;
-  static const double _descriptionSize = 13;
-  static const EdgeInsets _padding = EdgeInsets.all(18);
+  static const double _iconBoxSize = 48;
+  static const double _iconSize = 22;
+  static const double _titleSize = 15;
+  static const double _descriptionSize = 11.5;
+  static const EdgeInsets _padding = EdgeInsets.all(14);
   static const double _glowOpacity = 0.28;
 
   @override

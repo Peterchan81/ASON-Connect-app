@@ -33,7 +33,7 @@ class TextInputPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return HudPanel(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -60,7 +60,7 @@ class TextInputPanel extends StatelessWidget {
               ),
             ),
           ),
-          GlowIconButton(icon: Icons.send_rounded, onPressed: onSend, size: 46),
+          GlowIconButton(icon: Icons.send_rounded, onPressed: onSend, size: 40),
           const SizedBox(width: 2),
         ],
       ),

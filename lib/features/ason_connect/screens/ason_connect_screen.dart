@@ -221,7 +221,7 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             // 360 이하 소형 모바일에서는 카드 좌우 여백을 살짝 줄여 내용 공간을 확보합니다.
-            final horizontalPadding = constraints.maxWidth <= 360 ? 10.0 : 16.0;
+            final horizontalPadding = constraints.maxWidth <= 360 ? 8.0 : 14.0;
 
             return Column(
               children: [

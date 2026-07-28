@@ -82,11 +82,11 @@ class _GlassMessageBubbleState extends State<GlassMessageBubble>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     final bubble = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
         color: (isUser ? AsonColors.userBubble : AsonColors.surfaceNavy)
             .withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(17),
         border: Border.all(
           color: glowColor.withValues(alpha: isUser ? 0.4 : 0.55),
           width: 1.1,
@@ -105,13 +105,13 @@ class _GlassMessageBubbleState extends State<GlassMessageBubble>
             Text(
               widget.senderName,
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w700,
                 color: AsonColors.primary.withValues(alpha: 0.85),
                 letterSpacing: 0.4,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
           ],
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -126,17 +126,17 @@ class _GlassMessageBubbleState extends State<GlassMessageBubble>
                   child: Icon(
                     Icons.check_circle_rounded,
                     color: glowColor,
-                    size: 20,
+                    size: 17,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 7),
               ],
               Flexible(
                 child: Text(
                   widget.text,
                   style: const TextStyle(
-                    fontSize: 16,
-                    height: 1.5,
+                    fontSize: 14,
+                    height: 1.45,
                     color: Colors.white,
                   ),
                 ),
@@ -148,22 +148,22 @@ class _GlassMessageBubbleState extends State<GlassMessageBubble>
     );
 
     final timestampRow = Padding(
-      padding: EdgeInsets.only(top: 4, left: isUser ? 0 : 42),
+      padding: EdgeInsets.only(top: 3, left: isUser ? 0 : 37),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isUser) ...[
             Icon(
               Icons.done_all_rounded,
-              size: 13,
+              size: 11.5,
               color: AsonColors.blueNeon.withValues(alpha: 0.7),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 3),
           ],
           Text(
             _timeText,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 10,
               color: Colors.white.withValues(alpha: 0.38),
             ),
           ),
@@ -185,7 +185,7 @@ class _GlassMessageBubbleState extends State<GlassMessageBubble>
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildAvatar(),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Flexible(child: bubble),
             ],
           ),
@@ -204,7 +204,7 @@ class _GlassMessageBubbleState extends State<GlassMessageBubble>
               maxWidth: MediaQuery.of(context).size.width * 0.78,
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 5),
               child: content,
             ),
           ),
@@ -217,15 +217,15 @@ class _GlassMessageBubbleState extends State<GlassMessageBubble>
     final path = widget.avatarAssetPath;
     if (path == null) {
       return const GlowAvatar(
-        size: 32,
+        size: 28,
         icon: Icons.smart_toy_rounded,
-        iconSize: 16,
+        iconSize: 14,
       );
     }
 
     return Container(
-      width: 32,
-      height: 32,
+      width: 28,
+      height: 28,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AsonColors.surfaceNavyLight,
