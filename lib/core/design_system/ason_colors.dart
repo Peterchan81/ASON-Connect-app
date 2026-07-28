@@ -27,4 +27,29 @@ class AsonColors {
 
   /// 격자/HUD 선처럼 아주 옅게 쓰는 라인 색상입니다.
   static const Color hudLine = Color(0xFF1E3A5F);
+
+  // ---- 라이트 모드 ----
+  // Glow Card/HudPanel/NeonTextField 같은 "떠 있는 어두운 유리" 컴포넌트는
+  // 라이트 모드에서도 그대로(다크) 유지합니다. 여기 두 색은 화면 바탕과 상단바처럼
+  // 배경 자체가 뒤집혀야 하는 부분에만 사용합니다. ASON Core의 라이트 배색
+  // (크림 카드 0xFFFFF7E8, 텍스트 black87/54)과 같은 톤을 재사용합니다.
+  static const Color lightBackground = Color(0xFFFBF9F5);
+  static const Color lightSurface = Color(0xFFFFF7E8);
+  static const Color lightTextPrimary = Color(0xDD000000);
+  static const Color lightTextSecondary = Color(0x8A000000);
+
+  /// 화면 배경 위에 바로 놓이는(카드에 감싸이지 않은) 텍스트/아이콘 색입니다.
+  /// Glow Card 등 자체적으로 어두운 유리 표면을 가진 컴포넌트 내부에서는
+  /// 배경 밝기와 무관하게 항상 밝은 색(Colors.white)을 그대로 사용합니다.
+  static Color onBackground(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? lightTextPrimary
+        : Colors.white;
+  }
+
+  static Color onBackgroundMuted(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? lightTextSecondary
+        : Colors.white.withValues(alpha: 0.7);
+  }
 }

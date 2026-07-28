@@ -180,12 +180,13 @@ void main() {
 
     await _sendText(tester, '30분 전');
 
-    expect(find.text('일정 요약'), findsOneWidget);
-    // "오후 5시"/"팀 회의"는 사용자의 답변 말풍선과 확인 카드 값에 모두 나타납니다.
+    // 큰 확인 카드 대신, 입력창 바로 위 컴팩트한 실시간 정리 패널에 나타납니다.
+    expect(find.text('동기화 준비'), findsOneWidget);
+    // "오후 5시"/"팀 회의"는 사용자의 답변 말풍선과 패널 값에 모두 나타납니다.
     expect(find.text('오후 5시'), findsWidgets);
     expect(find.text('팀 회의'), findsWidgets);
     expect(find.text('30분 전'), findsWidgets);
-    expect(find.text('ASON에 동기화'), findsOneWidget);
+    expect(find.text('ASON Core에 동기화'), findsOneWidget);
   });
 
   testWidgets('일정 대화: 장소를 먼저 알아내고, 알림은 마지막에 단독으로 확인한 뒤 수정/동기화하면 초기화된다', (
@@ -207,13 +208,15 @@ void main() {
     );
 
     await _sendText(tester, '30분 전');
-    expect(find.text('일정 요약'), findsOneWidget);
-    expect(find.text('오늘 오후 3시'), findsOneWidget);
-    // "김 과장과 미팅"/"30분 전"은 사용자의 답변 말풍선과 확인 카드 값에 모두 나타납니다.
+    // 큰 확인 카드 대신, 입력창 바로 위 컴팩트한 실시간 정리 패널에 나타납니다.
+    expect(find.text('동기화 준비'), findsOneWidget);
+    expect(find.text('오늘'), findsOneWidget);
+    expect(find.text('오후 3시'), findsOneWidget);
+    // "김 과장과 미팅"/"30분 전"은 사용자의 답변 말풍선과 패널 값에 모두 나타납니다.
     expect(find.text('김 과장과 미팅'), findsWidgets);
     expect(find.text('대전 둔산동'), findsOneWidget);
     expect(find.text('30분 전'), findsWidgets);
-    expect(find.text('ASON에 동기화'), findsOneWidget);
+    expect(find.text('ASON Core에 동기화'), findsOneWidget);
 
     // 수정: 내용을 지우지 않고 무엇을 바꿀지 되묻는다.
     await tester.tap(find.text('수정'));
@@ -222,10 +225,10 @@ void main() {
 
     await _sendText(tester, '시간을 오후 4시로 바꿔줘.');
     expect(find.text('시간을 오후 4시로 변경했습니다.'), findsOneWidget);
-    expect(find.text('오늘 오후 4시'), findsOneWidget);
+    expect(find.text('오후 4시'), findsOneWidget);
 
     // 동기화: 로딩 표시(약 1초) -> 완료 문구 -> 새 내용 입력 버튼.
-    await tester.tap(find.text('ASON에 동기화'));
+    await tester.tap(find.text('ASON Core에 동기화'));
     await tester.pump();
     expect(find.text('ASON Core에 동기화하는 중입니다...'), findsOneWidget);
 
@@ -243,7 +246,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('오늘 오후 4시'), findsNothing);
+    expect(find.text('오후 4시'), findsNothing);
   });
 
   testWidgets('일정 대화: 수정 버튼을 눌러도 확인 카드가 사라지지 않고, 자연어로 항목을 하나씩 고칠 수 있다', (
@@ -259,15 +262,17 @@ void main() {
     );
 
     await _sendText(tester, '없음');
-    expect(find.text('일정 요약'), findsOneWidget);
-    expect(find.text('내일 오후 3시'), findsOneWidget);
+    // 큰 확인 카드 대신, 입력창 바로 위 컴팩트한 실시간 정리 패널에 나타납니다.
+    expect(find.text('동기화 준비'), findsOneWidget);
+    expect(find.text('내일'), findsOneWidget);
+    expect(find.text('오후 3시'), findsOneWidget);
     expect(find.text('김 과장과 미팅'), findsOneWidget);
     expect(find.text('대전 둔산동'), findsOneWidget);
 
-    // 수정 버튼을 눌러도 확인 카드는 사라지지 않고, "수정" 버튼만 잠시 숨겨집니다.
+    // 수정 버튼을 눌러도 패널은 사라지지 않고, "수정" 버튼만 잠시 숨겨집니다.
     await tester.tap(find.text('수정'));
     await _settle(tester);
-    expect(find.text('일정 요약'), findsOneWidget);
+    expect(find.text('수정 가능'), findsOneWidget);
     expect(find.text('김 과장과 미팅'), findsOneWidget);
     expect(find.text('수정'), findsNothing);
 
@@ -323,7 +328,8 @@ void main() {
 
     await _sendText(tester, '오늘 혈압이 128에 82야.');
 
-    expect(find.text('건강 요약'), findsOneWidget);
+    // 큰 확인 카드 대신, 입력창 바로 위 컴팩트한 실시간 정리 패널에 나타납니다.
+    expect(find.text('동기화 준비'), findsOneWidget);
     expect(find.text('혈압'), findsOneWidget);
     expect(find.text('128 / 82 mmHg'), findsOneWidget);
   });
@@ -333,7 +339,7 @@ void main() {
 
     await _sendText(tester, '우유하고 계란 사야 해');
 
-    expect(find.text('메모 요약'), findsOneWidget);
+    expect(find.text('동기화 준비'), findsOneWidget);
     expect(find.text('우유와 계란 구매'), findsOneWidget);
   });
 
@@ -346,6 +352,6 @@ void main() {
       find.text('오늘 컨디션이 좋지 않으셨군요.\n이 내용을 건강 기록이나 메모로 정리할까요?'),
       findsOneWidget,
     );
-    expect(find.text('ASON에 동기화'), findsNothing);
+    expect(find.text('ASON Core에 동기화'), findsNothing);
   });
 }

@@ -140,6 +140,35 @@ void main() {
     expect(autoLogin.status, AutoLoginStatus.none);
   });
 
+  test('로그아웃해도 회원가입 정보(계정)는 삭제되지 않아, 같은 계정으로 다시 로그인할 수 있다', () async {
+    await registerTestUser();
+    await AuthService.instance.login(
+      id: 'tester',
+      password: 'pw1234',
+      keepSignedIn: false,
+    );
+
+    await AuthService.instance.logout();
+    expect(AuthService.instance.isSessionActive, isFalse);
+
+    // 같은 아이디로 다시 회원가입하면 여전히 "이미 사용 중"이어야 한다(계정이 남아있다는 뜻).
+    final reRegister = await AuthService.instance.register(
+      nickname: '다른닉네임',
+      id: 'tester',
+      email: 'other@ason.app',
+      password: 'pw5678',
+    );
+    expect(reRegister.isSuccess, isFalse);
+
+    // 기존 비밀번호로 다시 로그인할 수 있어야 한다.
+    final reLogin = await AuthService.instance.login(
+      id: 'tester',
+      password: 'pw1234',
+      keepSignedIn: false,
+    );
+    expect(reLogin.isSuccess, isTrue);
+  });
+
   test('자동 로그인만 해제하면, 지금 세션은 유지되지만 다음 실행부터는 로그인 화면으로 간다', () async {
     await registerTestUser();
     await AuthService.instance.login(

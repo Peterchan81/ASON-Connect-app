@@ -1,6 +1,7 @@
 // 설정 화면의 핵심 동작을 확인합니다.
-// (닉네임 변경, 알림 설정 저장, 테마 선택 저장, 로그아웃 취소/확정)
+// (닉네임 변경, 테마 선택 즉시 적용/저장, 로그아웃 취소/확정)
 
+import 'package:ason_voice_app/core/theme/theme_controller.dart';
 import 'package:ason_voice_app/features/auth/services/auth_service.dart';
 import 'package:ason_voice_app/features/settings/screens/settings_screen.dart';
 import 'package:ason_voice_app/features/settings/services/settings_service.dart';
@@ -25,6 +26,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     AuthService.instance.resetForTest();
+    ThemeController.instance.resetForTest();
     await AuthService.instance.register(
       nickname: '테스터',
       id: 'tester',
@@ -56,22 +58,7 @@ void main() {
     expect(AuthService.instance.currentNickname, '새닉네임');
   });
 
-  testWidgets('알림 스위치를 끄면 SettingsService에도 저장된다', (tester) async {
-    _usePhoneViewport(tester);
-    await tester.pumpWidget(const MaterialApp(home: SettingsScreen()));
-    await _settle(tester);
-
-    await tester.ensureVisible(find.text('일정'));
-    await tester.tap(find.text('일정'));
-    await _settle(tester);
-
-    final enabled = await SettingsService.instance.loadNotificationEnabled(
-      NotificationCategory.schedule,
-    );
-    expect(enabled, isFalse);
-  });
-
-  testWidgets('테마에서 라이트 모드를 고르면 저장된다', (tester) async {
+  testWidgets('테마에서 라이트 모드를 고르면 즉시 적용되고 저장된다', (tester) async {
     _usePhoneViewport(tester);
     await tester.pumpWidget(const MaterialApp(home: SettingsScreen()));
     await _settle(tester);
@@ -79,6 +66,9 @@ void main() {
     await tester.ensureVisible(find.text('라이트 모드'));
     await tester.tap(find.text('라이트 모드'));
     await _settle(tester);
+
+    // ThemeController가 즉시 갱신되어야 앱 전체(MaterialApp.themeMode)에 반영됩니다.
+    expect(ThemeController.instance.themeMode, ThemeMode.light);
 
     final mode = await SettingsService.instance.loadThemeMode();
     expect(mode, AppThemeMode.light);

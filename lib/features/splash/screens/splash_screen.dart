@@ -79,6 +79,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return CyberScaffold(
       animateBackground: true,
+      forceDark: true,
       body: Stack(
         children: [
           // 시작 화면 전용 네온 밀도 강화 배경입니다. (CyberBackground 위에 겹칩니다)

@@ -2,16 +2,43 @@
 // 바꿔서 저장소에 그대로 연결하는 단일 통로입니다. 카테고리별로 다른 저장
 // 로직을 따로 만들지 않고, 이 클래스 하나만 거쳐 upsert합니다. 같은 draft가
 // 수정 후 다시 동기화되어도 같은 id로 upsert되므로 중복 저장되지 않습니다.
+//
+// 일정은 추가로, 같은 날짜/시간/제목을 가진 "다른" 항목이 이미 있으면(완전히
+// 동일한 일정을 실수로 두 번 만든 경우) 저장을 막고 duplicate 결과를 돌려줍니다.
 
 import '../../ason_connect/models/draft_command.dart';
 import '../models/health_entry.dart';
 import '../models/home_schedule_entry.dart';
 import '../models/memo_model.dart';
 import '../models/project_entry.dart';
+import 'field_normalizer.dart';
 import 'health_core_repository.dart';
 import 'memo_core_repository.dart';
 import 'project_core_repository.dart';
 import 'schedule_core_repository.dart';
+
+/// [CoreSyncMapper.sync] 결과입니다. 성공/중복/실패를 구분해 화면이 알맞은
+/// 안내를 보여줄 수 있게 합니다.
+class CoreSyncResult {
+  const CoreSyncResult.success()
+    : isSuccess = true,
+      isDuplicate = false,
+      errorMessage = null;
+
+  const CoreSyncResult.duplicate(String message)
+    : isSuccess = false,
+      isDuplicate = true,
+      errorMessage = message;
+
+  const CoreSyncResult.failure(String message)
+    : isSuccess = false,
+      isDuplicate = false,
+      errorMessage = message;
+
+  final bool isSuccess;
+  final bool isDuplicate;
+  final String? errorMessage;
+}
 
 class CoreSyncMapper {
   CoreSyncMapper({
@@ -31,17 +58,32 @@ class CoreSyncMapper {
 
   static const List<String> _memoIdeaCategory = ['아이디어'];
 
-  /// draft를 같은 주제(같은 createdAt)의 기존 저장 항목이 있으면 덮어쓰고,
-  /// 없으면 새로 저장합니다.
-  Future<void> sync(DraftCommand draft) async {
+  /// 이 draft가 저장될 때 사용할 id입니다. 같은 draft(같은 createdAt)는 항상
+  /// 같은 id로 계산되므로, 수정 후 다시 동기화해도 upsert가 덮어쓰기로
+  /// 동작합니다(중복 생성 방지).
+  String idFor(DraftCommand draft) =>
+      'voice_${draft.createdAt.microsecondsSinceEpoch}';
+
+  /// draft를 같은 주제(같은 createdAt→같은 id)의 기존 저장 항목이 있으면
+  /// 덮어쓰고, 없으면 새로 저장합니다. 일정은 저장 전에 완전히 동일한(다른
+  /// id의) 일정이 이미 있는지 먼저 확인해, 있으면 저장하지 않고 duplicate로
+  /// 알려줍니다.
+  Future<CoreSyncResult> sync(DraftCommand draft) async {
     final category = draft.category;
-    if (category == null) return;
-    final id = 'voice_${draft.createdAt.microsecondsSinceEpoch}';
+    if (category == null) {
+      return const CoreSyncResult.failure('분류되지 않은 내용은 동기화할 수 없습니다.');
+    }
+    final id = idFor(draft);
 
     switch (category) {
       case DraftCommandCategory.schedule:
       case DraftCommandCategory.todo:
-        await _scheduleRepository.upsert(_toScheduleEntry(id, draft));
+        final entry = _toScheduleEntry(id, draft);
+        final duplicate = await _findDuplicateSchedule(entry);
+        if (duplicate != null) {
+          return const CoreSyncResult.duplicate('이미 동일한 일정이 있습니다.');
+        }
+        await _scheduleRepository.upsert(entry);
       case DraftCommandCategory.memo:
         await _memoRepository.upsert(_toMemoModel(id, draft));
       case DraftCommandCategory.health:
@@ -49,13 +91,31 @@ class CoreSyncMapper {
       case DraftCommandCategory.project:
         await _projectRepository.upsert(_toProjectEntry(id, draft));
     }
+    return const CoreSyncResult.success();
+  }
+
+  /// 같은 날짜에 (id는 다르지만) 시간·제목이 모두 같은 일정이 이미 있는지
+  /// 확인합니다. 사용자 입력의 공백/대소문자 차이는 같은 일정으로 취급합니다.
+  Future<HomeScheduleEntry?> _findDuplicateSchedule(
+    HomeScheduleEntry candidate,
+  ) async {
+    final existing = await _scheduleRepository.loadForDate(candidate.date);
+    for (final entry in existing) {
+      if (entry.id == candidate.id) continue;
+      final sameTime = entry.time == candidate.time;
+      final sameTitle =
+          entry.title.trim().toLowerCase() ==
+          candidate.title.trim().toLowerCase();
+      if (sameTime && sameTitle) return entry;
+    }
+    return null;
   }
 
   HomeScheduleEntry _toScheduleEntry(String id, DraftCommand draft) {
     return HomeScheduleEntry(
       id: id,
-      date: _resolveDate(draft.date),
-      time: _toHHmm(draft.time),
+      date: FieldNormalizer.resolveDate(draft.date),
+      time: FieldNormalizer.normalizeTime(draft.time),
       title: (draft.title ?? '-').trim(),
       isDone: false,
       memo: draft.memo,
@@ -103,47 +163,4 @@ class CoreSyncMapper {
     );
   }
 
-  /// "내일"/"오늘"처럼 상대적인 한글 표현이나 "8월 15일" 형식을 실제 날짜로
-  /// 바꿉니다. 알 수 없으면 오늘 날짜를 씁니다.
-  DateTime _resolveDate(String? koreanDate) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    switch (koreanDate) {
-      case '오늘':
-        return today;
-      case '내일':
-        return today.add(const Duration(days: 1));
-      case '모레':
-        return today.add(const Duration(days: 2));
-      case '어제':
-        return today.subtract(const Duration(days: 1));
-    }
-    if (koreanDate != null) {
-      final match = RegExp(r'(\d{1,2})월\s*(\d{1,2})일').firstMatch(koreanDate);
-      if (match != null) {
-        final month = int.parse(match.group(1)!);
-        final day = int.parse(match.group(2)!);
-        return DateTime(today.year, month, day);
-      }
-    }
-    return today;
-  }
-
-  /// "오후 3시"/"오전 10시 30분" 같은 한글 시간 표현을 ASON-Core가 쓰는
-  /// "HH:mm" 24시간 형식으로 바꿉니다. 알 수 없으면 "--:--"(시간 없음)입니다.
-  String _toHHmm(String? koreanTime) {
-    if (koreanTime == null) return '--:--';
-    final match = RegExp(
-      r'(오전|오후)?\s*(\d{1,2})시\s*(\d{1,2})?분?',
-    ).firstMatch(koreanTime);
-    if (match == null) return '--:--';
-
-    var hour = int.tryParse(match.group(2) ?? '') ?? 0;
-    final minute = int.tryParse(match.group(3) ?? '') ?? 0;
-    final isPm = match.group(1) == '오후';
-    if (isPm && hour < 12) hour += 12;
-    if (!isPm && hour == 12) hour = 0;
-
-    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
-  }
 }

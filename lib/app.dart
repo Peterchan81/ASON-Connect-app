@@ -3,18 +3,37 @@
 import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'features/splash/screens/splash_screen.dart';
 
-class AsonVoiceApp extends StatelessWidget {
+class AsonVoiceApp extends StatefulWidget {
   const AsonVoiceApp({super.key});
 
   @override
+  State<AsonVoiceApp> createState() => _AsonVoiceAppState();
+}
+
+class _AsonVoiceAppState extends State<AsonVoiceApp> {
+  @override
+  void initState() {
+    super.initState();
+    ThemeController.instance.load();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ASON Connect',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
-      home: const SplashScreen(),
+    return ListenableBuilder(
+      listenable: ThemeController.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'ASON Connect',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: ThemeController.instance.themeMode,
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }

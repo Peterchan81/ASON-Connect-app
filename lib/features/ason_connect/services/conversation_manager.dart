@@ -102,6 +102,12 @@ class ConversationManager {
     return _summaryBuilder.rows(draft);
   }
 
+  String? _lastSyncError;
+
+  /// 마지막 동기화 시도가 실패/중복이었다면 그 이유입니다. 성공하거나 아직
+  /// 시도하지 않았으면 null입니다. 실시간 정리 패널이 이 값을 보여줍니다.
+  String? get lastSyncError => _lastSyncError;
+
   /// 사용자가 문자 또는 음성으로 전달한 문장 하나를 처리합니다.
   /// [inputSource]는 이 문장이 음성/문자 중 어디서 왔는지이며, BrainEngine에 그대로
   /// 전달됩니다. (기존 호출부와의 호환을 위해 기본값은 unknown입니다)
@@ -115,6 +121,7 @@ class ConversationManager {
     if (rawText.isEmpty) return;
 
     _addUser(rawText);
+    _lastSyncError = null;
 
     final result = _brain.process(
       BrainInput(text: rawText, draft: _draft, inputSource: inputSource),
@@ -124,6 +131,50 @@ class ConversationManager {
     for (final message in result.messages) {
       _addAson(message.text, type: message.type);
     }
+  }
+
+  /// [rawInput]을 지금 당장 보낸 것처럼 미리 분석해 봅니다. 채팅 이력이나
+  /// 실제 draft 상태는 전혀 바꾸지 않는(순수) 미리보기입니다. 사용자가 아직
+  /// 전송하지 않고 입력 중인 문장을 실시간 정리 패널에 보여줄 때 사용합니다.
+  /// BrainEngine.process 자체가 부작용이 없으므로, 결과를 커밋하지 않는
+  /// 방식으로 안전하게 재사용할 수 있습니다(Brain Engine 로직은 그대로입니다).
+  DraftCommand? previewDraft(String rawInput) {
+    final rawText = rawInput.trim();
+    if (rawText.isEmpty) return _draft;
+
+    final result = _brain.process(
+      BrainInput(text: rawText, draft: _draft, inputSource: InputSource.unknown),
+    );
+    return result.draft;
+  }
+
+  /// 실시간 정리 패널의 수정 화면에서, 사용자가 직접 입력한 값으로 필드를
+  /// 바로 덮어씁니다. 자연어 재해석 없이(Brain Engine을 거치지 않고) 값만
+  /// 바꾸는, 대화형 수정(beginEdit)과는 별개의 경로입니다.
+  void updateDraftField({
+    String? date,
+    String? time,
+    String? location,
+    String? title,
+    String? alarm,
+    String? repeatOption,
+    String? memo,
+  }) {
+    final draft = _draft;
+    if (draft == null) return;
+
+    _draft = draft.copyWith(
+      date: date,
+      time: time,
+      location: location,
+      title: title,
+      alarm: alarm,
+      repeatOption: repeatOption,
+      memo: memo,
+      status: draft.status == DraftCommandStatus.synced
+          ? DraftCommandStatus.ready
+          : draft.status,
+    );
   }
 
   /// 수정 버튼: 지금 내용을 지우지 않고, 무엇을 바꿀지 되묻습니다.
@@ -150,6 +201,7 @@ class ConversationManager {
     final draft = _draft;
     if (draft == null || draft.status != DraftCommandStatus.syncing) return;
 
+    _lastSyncError = null;
     final payload = _summaryBuilder.payload(draft);
     final result = await _syncService.sync(payload);
 
@@ -157,18 +209,30 @@ class ConversationManager {
       try {
         // ASON-Core와 같은 저장 구조(SharedPreferences)에 실제로 반영합니다.
         // 같은 draft(같은 createdAt)를 다시 동기화하면 같은 id로 덮어써서
-        // 중복 저장되지 않습니다.
-        await _coreSyncMapper.sync(draft);
+        // 중복 저장되지 않습니다. 완전히 동일한(다른 id의) 일정이 이미 있으면
+        // duplicate로 거부됩니다.
+        final coreResult = await _coreSyncMapper.sync(draft);
+        if (!coreResult.isSuccess) {
+          _lastSyncError = coreResult.errorMessage;
+          _draft = draft.copyWith(status: DraftCommandStatus.ready);
+          _addAson(
+            coreResult.errorMessage ?? '동기화 중 오류가 발생했습니다.',
+            type: ChatMessageType.error,
+          );
+          return;
+        }
         _draft = draft.copyWith(status: DraftCommandStatus.synced);
         _addAson(
           'ASON Core에 동기화할 준비가 완료되었습니다.',
           type: ChatMessageType.syncComplete,
         );
       } catch (_) {
+        _lastSyncError = '동기화 중 오류가 발생했습니다.';
         _draft = draft.copyWith(status: DraftCommandStatus.ready);
         _addAson('동기화 중 오류가 발생했습니다.', type: ChatMessageType.error);
       }
     } else {
+      _lastSyncError = result.errorMessage ?? '동기화 중 오류가 발생했습니다.';
       _draft = draft.copyWith(status: DraftCommandStatus.ready);
       _addAson(
         result.errorMessage ?? '동기화 중 오류가 발생했습니다.',
@@ -182,6 +246,7 @@ class ConversationManager {
   void reset() {
     _messages.clear();
     _draft = null;
+    _lastSyncError = null;
     _addAson(_greetingText);
   }
 

@@ -12,6 +12,7 @@ class CyberTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.subtitle,
     this.trailing,
     this.leading,
+    this.forceDark = false,
   });
 
   final String title;
@@ -19,16 +20,29 @@ class CyberTopBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? trailing;
   final Widget? leading;
 
+  /// true면 앱 테마 설정과 무관하게 항상 다크 네온으로 그립니다.
+  final bool forceDark;
+
   @override
   Size get preferredSize => const Size.fromHeight(64);
 
   @override
   Widget build(BuildContext context) {
+    final isLight =
+        !forceDark && Theme.of(context).brightness == Brightness.light;
+    final barColor = isLight
+        ? AsonColors.lightSurface.withValues(alpha: 0.92)
+        : AsonColors.darkNavy.withValues(alpha: 0.88);
+    final titleColor = forceDark ? Colors.white : AsonColors.onBackground(context);
+    final subtitleColor = forceDark
+        ? Colors.white.withValues(alpha: 0.5)
+        : AsonColors.onBackgroundMuted(context);
+
     return Container(
       height: preferredSize.height,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: AsonColors.darkNavy.withValues(alpha: 0.88),
+        color: barColor,
         border: Border(
           bottom: BorderSide(color: AsonColors.primary.withValues(alpha: 0.28)),
         ),
@@ -54,10 +68,10 @@ class CyberTopBar extends StatelessWidget implements PreferredSizeWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: titleColor,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -67,10 +81,7 @@ class CyberTopBar extends StatelessWidget implements PreferredSizeWidget {
                       subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: Colors.white.withValues(alpha: 0.5),
-                      ),
+                      style: TextStyle(fontSize: 11.5, color: subtitleColor),
                     ),
                   ],
                 ],

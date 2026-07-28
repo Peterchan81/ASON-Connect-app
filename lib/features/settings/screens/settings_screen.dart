@@ -1,12 +1,14 @@
 // ASON Connect 설정 화면입니다.
-// 계정 정보(닉네임만 수정 가능)·테마·알림·언어·버전 정보를 보여주고,
-// 화면 하단에서 로그아웃할 수 있습니다. ASON Connect의 다크 + 오렌지 네온
-// 디자인을 그대로 따릅니다.
+// 계정 정보(닉네임만 수정 가능)·테마·버전 정보를 보여주고, 화면 하단에서
+// 로그아웃할 수 있습니다. ASON Connect의 다크 + 오렌지 네온 디자인을 그대로
+// 따릅니다. 테마를 선택하면 ThemeController를 통해 앱 전체에 즉시 반영되고
+// SharedPreferences에 저장되어 다음 실행에도 유지됩니다.
 
 import 'package:flutter/material.dart';
 
 import '../../../core/app_info.dart';
 import '../../../core/design_system/design_system.dart';
+import '../../../core/theme/theme_controller.dart';
 import '../../auth/models/ason_account.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/services/auth_service.dart';
@@ -29,10 +31,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _nicknameInfo;
 
   AppThemeMode _themeMode = AppThemeMode.dark;
-  AppLanguage _language = AppLanguage.korean;
-  final Map<NotificationCategory, bool> _notifications = {
-    for (final category in NotificationCategory.values) category: true,
-  };
 
   @override
   void initState() {
@@ -59,20 +57,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadPreferences() async {
     final themeMode = await SettingsService.instance.loadThemeMode();
-    final language = await SettingsService.instance.loadLanguage();
-    final notifications = <NotificationCategory, bool>{};
-    for (final category in NotificationCategory.values) {
-      notifications[category] = await SettingsService.instance
-          .loadNotificationEnabled(category);
-    }
     if (!mounted) return;
-    setState(() {
-      _themeMode = themeMode;
-      _language = language;
-      _notifications
-        ..clear()
-        ..addAll(notifications);
-    });
+    setState(() => _themeMode = themeMode);
   }
 
   Future<void> _handleSaveNickname() async {
@@ -107,21 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _handleThemeChanged(AppThemeMode? mode) async {
     if (mode == null) return;
     setState(() => _themeMode = mode);
-    await SettingsService.instance.saveThemeMode(mode);
-  }
-
-  Future<void> _handleLanguageChanged(AppLanguage? language) async {
-    if (language == null) return;
-    setState(() => _language = language);
-    await SettingsService.instance.saveLanguage(language);
-  }
-
-  Future<void> _handleNotificationChanged(
-    NotificationCategory category,
-    bool enabled,
-  ) async {
-    setState(() => _notifications[category] = enabled);
-    await SettingsService.instance.saveNotificationEnabled(category, enabled);
+    // ThemeController가 저장(SettingsService)과 화면 즉시 반영을 함께 처리합니다.
+    await ThemeController.instance.setMode(mode);
   }
 
   Future<void> _handleDisableAutoLogin() async {
@@ -235,43 +208,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               _SettingsSection(
-                title: '알림 설정',
-                child: Column(
-                  children: [
-                    for (final category in NotificationCategory.values)
-                      Material(
-                        color: Colors.transparent,
-                        child: SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          activeThumbColor: AsonColors.primary,
-                          value: _notifications[category] ?? true,
-                          onChanged: (value) =>
-                              _handleNotificationChanged(category, value),
-                          title: Text(
-                            category.label,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _SettingsSection(
-                title: '언어',
-                child: Column(
-                  children: [
-                    for (final language in AppLanguage.values)
-                      _SelectableTile(
-                        label: language.label,
-                        selected: language == _language,
-                        onTap: () => _handleLanguageChanged(language),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _SettingsSection(
                 title: '버전 정보',
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -297,7 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-/// 설정 화면의 각 항목을 감싸는 공통 카드입니다. (계정 정보/테마/알림/언어/버전 정보)
+/// 설정 화면의 각 항목을 감싸는 공통 카드입니다. (계정 정보/테마/버전 정보)
 class _SettingsSection extends StatelessWidget {
   const _SettingsSection({required this.title, required this.child});
 

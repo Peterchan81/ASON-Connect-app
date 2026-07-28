@@ -178,8 +178,10 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return CyberScaffold(
+      forceDark: true,
       appBar: CyberTopBar(
         title: '회원가입',
+        forceDark: true,
         leading: GlowIconButton(
           icon: Icons.arrow_back_rounded,
           onPressed: () => Navigator.of(context).pop(false),

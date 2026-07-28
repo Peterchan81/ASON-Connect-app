@@ -6,8 +6,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/design_system/design_system.dart';
+import '../models/draft_command.dart';
 import '../models/voice_mic_phase.dart';
 import 'mode_switch_button.dart';
+import 'schedule_preview_panel.dart';
 import 'text_input_panel.dart';
 import 'voice_input_card.dart';
 
@@ -22,6 +24,11 @@ class InputArea extends StatelessWidget {
     required this.onMicPressed,
     required this.onToggleMode,
     this.isSyncing = false,
+    this.panelDraft,
+    this.panelIsPreviewOnly = false,
+    this.panelSyncError,
+    this.onPanelEdit,
+    this.onPanelSync,
   });
 
   /// 아직 고르지 않았으면 null입니다.
@@ -33,6 +40,14 @@ class InputArea extends StatelessWidget {
   final VoidCallback onMicPressed;
   final VoidCallback onToggleMode;
   final bool isSyncing;
+
+  /// 입력창 바로 위 실시간 정리 패널에 보여줄 내용입니다. (커밋된 draft 또는
+  /// 아직 전송하지 않은 문장의 미리보기) 둘 다 없으면 패널을 그리지 않습니다.
+  final DraftCommand? panelDraft;
+  final bool panelIsPreviewOnly;
+  final String? panelSyncError;
+  final VoidCallback? onPanelEdit;
+  final VoidCallback? onPanelSync;
 
   @override
   Widget build(BuildContext context) {
@@ -47,21 +62,38 @@ class InputArea extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 13, 16, 10),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            switchInCurve: Curves.easeInOutCubic,
-            switchOutCurve: Curves.easeInOutCubic,
-            transitionBuilder: (child, animation) {
-              final slide = Tween<Offset>(
-                begin: const Offset(0, 0.18),
-                end: Offset.zero,
-              ).animate(animation);
-              return SlideTransition(
-                position: slide,
-                child: FadeTransition(opacity: animation, child: child),
-              );
-            },
-            child: _buildContent(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 동기화 중에는 아래 큰 표시(_buildSyncing)가 이미 진행 상태를
+              // 보여주므로, 패널과 중복되지 않도록 그때는 숨깁니다.
+              if (!isSyncing && panelDraft != null) ...[
+                SchedulePreviewPanel(
+                  draft: panelDraft,
+                  isPreviewOnly: panelIsPreviewOnly,
+                  syncError: panelSyncError,
+                  onEdit: onPanelEdit,
+                  onSync: onPanelSync,
+                ),
+                const SizedBox(height: 10),
+              ],
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                switchInCurve: Curves.easeInOutCubic,
+                switchOutCurve: Curves.easeInOutCubic,
+                transitionBuilder: (child, animation) {
+                  final slide = Tween<Offset>(
+                    begin: const Offset(0, 0.18),
+                    end: Offset.zero,
+                  ).animate(animation);
+                  return SlideTransition(
+                    position: slide,
+                    child: FadeTransition(opacity: animation, child: child),
+                  );
+                },
+                child: _buildContent(),
+              ),
+            ],
           ),
         ),
       ),

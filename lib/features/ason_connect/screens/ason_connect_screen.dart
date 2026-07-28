@@ -39,14 +39,49 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
 
   Timer? _successResetTimer;
 
+  // 아직 전송하지 않은 문장을 실시간으로 미리 분석해, 입력창 바로 위 패널에
+  // 보여주기 위한 상태입니다. (전송 전까지는 채팅 이력/실제 draft에 반영되지
+  // 않는 순수 미리보기)
+  Timer? _previewDebounce;
+  DraftCommand? _livePreviewDraft;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController.addListener(_handleTextChangedForPreview);
+  }
+
   @override
   void dispose() {
     // 화면이 사라질 때는 진행 중인 음성 인식을 반드시 정리합니다.
     _voiceService.dispose();
     _successResetTimer?.cancel();
+    _previewDebounce?.cancel();
+    _textController.removeListener(_handleTextChangedForPreview);
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// 이미 진행 중인 draft가 있으면(질문에 답하는 중 등) 실시간 미리보기는
+  /// 쓰지 않고, 실제 커밋된 draft만 패널에 보여줍니다. 아직 아무 것도
+  /// 시작하지 않았을 때만(= 첫 문장을 입력하는 중일 때만) 미리보기를 씁니다.
+  void _handleTextChangedForPreview() {
+    if (_conversationManager.currentDraft != null) return;
+
+    _previewDebounce?.cancel();
+    final text = _textController.text;
+    if (text.trim().isEmpty) {
+      if (_livePreviewDraft != null) setState(() => _livePreviewDraft = null);
+      return;
+    }
+
+    _previewDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      setState(() {
+        _livePreviewDraft = _conversationManager.previewDraft(text);
+      });
+    });
   }
 
   VoiceMicPhase _micPhaseFor(VoiceState state) {
@@ -98,6 +133,7 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
         text,
         inputSource: InputSource.keyboard,
       );
+      _livePreviewDraft = null;
       _textController.clear();
     });
 
@@ -180,6 +216,7 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
     // 인식된 문장을 전달했다는 표시(success)는 VoiceService가 이미 보여주고 있습니다.
     setState(() {
       _conversationManager.handleUserText(text, inputSource: InputSource.voice);
+      _livePreviewDraft = null;
       _textController.clear();
     });
     _scrollToBottom();
@@ -194,13 +231,11 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
   @override
   Widget build(BuildContext context) {
     final draft = _conversationManager.currentDraft;
-    // 수정 버튼을 눌러도(editing) 확인 카드는 절대 사라지지 않고 계속 보입니다.
-    final showSummaryCard = _conversationManager.isSummaryAvailable;
-    final isEditing = draft?.status == DraftCommandStatus.editing;
     final isSyncing =
         draft != null && draft.status == DraftCommandStatus.syncing;
     final showNewInputButton =
         draft != null && draft.status == DraftCommandStatus.synced;
+    final panelDraft = draft ?? _livePreviewDraft;
 
     return CyberScaffold(
       appBar: CyberTopBar(
@@ -231,32 +266,15 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
                     scrollController: _scrollController,
                   ),
                 ),
-                // 확인 카드/새 입력 버튼이 나타나거나 사라질 때 레이아웃이 뚝 끊기지 않고
-                // 부드럽게 높이가 바뀌도록 AnimatedSize로 감쌉니다.
+                // 새 입력 버튼이 나타나거나 사라질 때 레이아웃이 뚝 끊기지 않고
+                // 부드럽게 높이가 바뀌도록 AnimatedSize로 감쌉니다. (일정 정리는
+                // 이제 이 큰 카드가 아니라 입력창 바로 위 컴팩트 패널이 담당합니다)
                 AnimatedSize(
                   duration: const Duration(milliseconds: 240),
                   curve: Curves.easeOutCubic,
                   alignment: Alignment.topCenter,
                   child: Column(
                     children: [
-                      if (showSummaryCard)
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            horizontalPadding,
-                            4,
-                            horizontalPadding,
-                            8,
-                          ),
-                          child: SummaryCard(
-                            title: _conversationManager.summaryTitle ?? '요약',
-                            rows: _conversationManager.summaryRows,
-                            primaryLabel: 'ASON에 동기화',
-                            // 수정 질문에 아직 답하지 않은 동안에는 버튼을 비활성화합니다.
-                            onPrimary: isEditing ? null : _handleSync,
-                            secondaryLabel: '수정',
-                            onSecondary: isEditing ? null : _handleEdit,
-                          ),
-                        ),
                       if (showNewInputButton)
                         Padding(
                           padding: EdgeInsets.fromLTRB(
@@ -291,6 +309,11 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
                         onMicPressed: _onMicPressed,
                         onToggleMode: _toggleInputMode,
                         isSyncing: isSyncing,
+                        panelDraft: panelDraft,
+                        panelIsPreviewOnly: draft == null,
+                        panelSyncError: _conversationManager.lastSyncError,
+                        onPanelEdit: _handleEdit,
+                        onPanelSync: _handleSync,
                       );
                     },
                   ),
