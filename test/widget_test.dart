@@ -84,7 +84,8 @@ void main() {
     await tester.pumpWidget(const AsonVoiceApp());
     await tester.pump();
 
-    expect(find.text('ASON'), findsOneWidget);
+    // "ASON" 로고는 Glow용 레이어 + 그라디언트 레이어, 두 겹의 Text로 그려집니다.
+    expect(find.text('ASON'), findsNWidgets(2));
     expect(find.text('CONNECT'), findsOneWidget);
     expect(find.text('잠시 후 시작됩니다.'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);

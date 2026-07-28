@@ -93,8 +93,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 // 줄입니다. 화면이 아주 작거나 커도 요소가 과하게 작아지거나
                 // 커지지 않도록 범위를 제한합니다.
                 final scale = (height / 844).clamp(0.72, 1.08);
-                final characterRingSize = (height * 0.30).clamp(168.0, 288.0);
-                final characterImageSize = characterRingSize * 0.7;
+                final characterRingSize = (height * 0.32).clamp(172.0, 300.0);
+                final characterImageSize = characterRingSize * 0.6;
                 final countdownSize = (height * 0.16).clamp(88.0, 132.0);
 
                 // 작은 화면(작은 스마트폰, 세로로 좁은 Chrome 창)에서도 내용이
@@ -176,25 +176,25 @@ class _SplashDescription extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fontSize = (19 * scale).clamp(16.0, 21.0);
+    final fontSize = (17 * scale).clamp(15.0, 19.0);
     return Text.rich(
       TextSpan(
         style: TextStyle(
           fontSize: fontSize,
-          height: 1.7,
-          fontWeight: FontWeight.w600,
-          color: Colors.white.withValues(alpha: 0.92),
+          height: 1.5,
+          fontWeight: FontWeight.w400,
+          color: Colors.white.withValues(alpha: 0.88),
         ),
         children: [
           const TextSpan(text: '말하거나 입력하면\n'),
           TextSpan(
             text: 'ASON',
-            style: TextStyle(color: AsonColors.primary, fontWeight: FontWeight.w800),
+            style: TextStyle(color: AsonColors.primary, fontWeight: FontWeight.w700),
           ),
           const TextSpan(text: '이 내용을 정리하여\n통합 시스템에 '),
           TextSpan(
             text: '공유',
-            style: TextStyle(color: AsonColors.primary, fontWeight: FontWeight.w800),
+            style: TextStyle(color: AsonColors.primary, fontWeight: FontWeight.w700),
           ),
           const TextSpan(text: '합니다.'),
         ],
