@@ -16,6 +16,7 @@ class GlowButton extends StatelessWidget {
     this.color = AsonColors.primary,
     this.icon,
     this.expand = true,
+    this.isLoading = false,
   });
 
   final String label;
@@ -25,7 +26,11 @@ class GlowButton extends StatelessWidget {
   final IconData? icon;
   final bool expand;
 
-  bool get _isDisabled => onPressed == null;
+  /// true면 라벨 대신 작은 로딩 표시를 보여주고, 중복 클릭을 막기 위해
+  /// onPressed가 눌려도 무시합니다. (예: 로그인/동기화 처리 중)
+  final bool isLoading;
+
+  bool get _isDisabled => onPressed == null || isLoading;
 
   Color get _background {
     switch (variant) {
@@ -54,34 +59,43 @@ class GlowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: 18, color: _foreground),
-          const SizedBox(width: 8),
-        ],
-        Flexible(
-          child: Text(
-            label,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: _foreground,
+    final content = isLoading
+        ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              valueColor: AlwaysStoppedAnimation(_foreground),
             ),
-          ),
-        ),
-      ],
-    );
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: _foreground),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: _foreground,
+                  ),
+                ),
+              ),
+            ],
+          );
 
     final button = Material(
       color: _background,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: onPressed,
+        onTap: _isDisabled ? null : onPressed,
         child: Container(
           height: 48,
           width: expand ? double.infinity : null,

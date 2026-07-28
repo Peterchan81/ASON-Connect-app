@@ -7,8 +7,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ason_voice_app/app.dart';
+import 'package:ason_voice_app/features/auth/services/auth_service.dart';
 
 Future<void> _settle(WidgetTester tester) async {
   for (var i = 0; i < 10; i++) {
@@ -25,10 +27,30 @@ void _usePhoneViewport(WidgetTester tester) {
   addTearDown(tester.view.resetDevicePixelRatio);
 }
 
+/// Splash는 자동 로그인 정보가 있어야 곧바로 ASON Connect 화면으로 넘어갑니다.
+/// 대화 흐름 자체를 확인하는 테스트들은 로그인 화면부터 다시 검증할 필요가
+/// 없으므로, 매 테스트마다 자동 로그인된 계정을 미리 만들어 둡니다.
+Future<void> _seedAutoLogin() async {
+  SharedPreferences.setMockInitialValues({});
+  AuthService.instance.resetForTest();
+  await AuthService.instance.register(
+    nickname: '테스터',
+    id: 'tester',
+    email: 'tester@ason.app',
+    password: 'pw1234',
+  );
+  await AuthService.instance.login(
+    id: 'tester',
+    password: 'pw1234',
+    keepSignedIn: true,
+  );
+}
+
 /// Splash의 3초 자동 전환을 통과시키고, 입력 방식으로 "키보드 입력"을 골라
 /// 곧바로 대화까지 진입합니다. 입력 방식은 이번 세션에서만 유지되며 기기에
 /// 저장하지 않으므로, 매번 새로 골라야 합니다.
 Future<void> _startChatInKeyboardMode(WidgetTester tester) async {
+  await _seedAutoLogin();
   _usePhoneViewport(tester);
   await tester.pumpWidget(const AsonVoiceApp());
   await tester.pump();
@@ -49,6 +71,7 @@ void main() {
   testWidgets('Splash 화면이 표시된 뒤 3초 후 ASON Connect 화면(입력 방식 선택)으로 자동 전환된다', (
     WidgetTester tester,
   ) async {
+    await _seedAutoLogin();
     _usePhoneViewport(tester);
     await tester.pumpWidget(const AsonVoiceApp());
     await tester.pump();
@@ -63,7 +86,7 @@ void main() {
 
     expect(find.text('ASON Connect'), findsOneWidget);
     expect(find.text('Voice & Text Input'), findsOneWidget);
-    expect(find.text('연결 준비 완료'), findsOneWidget);
+    expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
 
     // 아직 입력 방식을 고른 적이 없으므로, 대화 화면 하단에 선택 UI가 먼저 나옵니다.
     expect(find.text('입력 방식을 선택하세요.'), findsOneWidget);

@@ -52,6 +52,8 @@ class CyberTopBar extends StatelessWidget implements PreferredSizeWidget {
                 children: [
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -63,6 +65,8 @@ class CyberTopBar extends StatelessWidget implements PreferredSizeWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11.5,
                         color: Colors.white.withValues(alpha: 0.5),

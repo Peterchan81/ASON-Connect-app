@@ -22,7 +22,7 @@ class ChatArea extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       controller: scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];

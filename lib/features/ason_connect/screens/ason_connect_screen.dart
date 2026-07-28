@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/design_system/design_system.dart';
+import '../../settings/screens/settings_screen.dart';
 import '../models/draft_command.dart';
 import '../models/voice_mic_phase.dart';
 import '../services/conversation_manager.dart';
@@ -26,10 +27,6 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
   final ScrollController _scrollController = ScrollController();
   final ConversationManager _conversationManager = ConversationManager();
   final SpeechRecognitionService _speechService = SpeechRecognitionService();
-
-  // 실제 ASON-Core 연결은 아직 없어, 화면 우측 상태 표시는 가상(Mock) 값입니다.
-  // 사용자에게는 "연결 준비 완료" 문구만 보여줍니다.
-  static const bool _simulatedReady = true;
 
   VoiceMicPhase _voicePhase = VoiceMicPhase.ready;
 
@@ -109,6 +106,12 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
     if (!mounted) return;
     setState(() {});
     _scrollToBottom();
+  }
+
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+    );
   }
 
   /// 새 내용 입력 버튼: 대화와 작성 중이던 내용을 모두 초기화합니다.
@@ -233,9 +236,15 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
       appBar: CyberTopBar(
         title: 'ASON Connect',
         subtitle: 'Voice & Text Input',
-        trailing: ConnectionStatus(
-          label: _simulatedReady ? '연결 준비 완료' : '연결 대기 중',
-          color: _simulatedReady ? AsonColors.primary : AsonColors.error,
+        trailing: Tooltip(
+          message: '설정',
+          child: GlowIconButton(
+            icon: Icons.settings_rounded,
+            onPressed: _openSettings,
+            filled: false,
+            glow: false,
+            size: 36,
+          ),
         ),
       ),
       body: SafeArea(
