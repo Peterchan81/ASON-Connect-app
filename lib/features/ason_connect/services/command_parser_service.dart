@@ -62,6 +62,9 @@ class CommandParserService {
     'alarm': '알림',
     'repeat': '반복',
     'memo': '메모',
+    'memoType': '종류',
+    'projectAction': '활동',
+    'progress': '진행률',
   };
 
   // 묶음 질문(①②③)에 표시할 때만 쓰는 라벨입니다. 일반 라벨과 다르게 표현할 항목만 넣습니다.
@@ -86,6 +89,12 @@ class CommandParserService {
         return draft.repeatOption;
       case 'memo':
         return draft.memo;
+      case 'memoType':
+        return draft.memoType;
+      case 'projectAction':
+        return draft.projectAction;
+      case 'progress':
+        return draft.progress;
     }
     return null;
   }

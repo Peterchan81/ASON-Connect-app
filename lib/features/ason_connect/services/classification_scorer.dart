@@ -60,6 +60,9 @@ class ClassificationScorer {
       '두통',
       '아파',
       '아프',
+      '복용',
+      '영양제',
+      '비타민',
     ],
     DraftCommandCategory.project: ['프로젝트', '개발', '아이디어', '기획', '수정'],
     DraftCommandCategory.todo: ['해야', '할 일', '할일', '준비', '처리'],
@@ -72,6 +75,13 @@ class ClassificationScorer {
   );
   static final RegExp exercisePattern = RegExp(
     r'(\d+\s*(분|시간))\s*(간\s*)?(걸었|걷|운동|뛰었|뛰|탔)',
+  );
+
+  // "혈압약 먹었어"/"영양제 먹었다"/"비타민 복용"처럼, 약 이름(또는 영양제/비타민) 뒤에
+  // 복용을 나타내는 동사가 붙는 표현입니다. 그룹1이 약 이름(또는 영양제/비타민) 자체입니다.
+  static final RegExp medicationPattern = RegExp(
+    r'(?:^|\s)(\S*?(?:약|영양제|비타민))\s*(?:을|를)?\s*'
+    r'(?:먹었|먹음|먹었어|먹었다|복용했|복용|드셨|드셨어요|드셨습니다)',
   );
 
   static final RegExp _weightPattern = RegExp(
@@ -124,7 +134,8 @@ class ClassificationScorer {
         if (_weightPattern.hasMatch(text) ||
             (_bloodPressurePattern.hasMatch(text) && text.contains('혈압')) ||
             _glucosePattern.hasMatch(text) ||
-            exercisePattern.hasMatch(text)) {
+            exercisePattern.hasMatch(text) ||
+            medicationPattern.hasMatch(text)) {
           score += 3;
         }
         break;

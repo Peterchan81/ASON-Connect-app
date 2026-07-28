@@ -27,7 +27,6 @@ class CategoryDraftBuilder {
       case DraftCommandCategory.schedule:
         return _beginSchedule(context, analysisText, rawText, intent: intent);
       case DraftCommandCategory.memo:
-      case DraftCommandCategory.project:
       case DraftCommandCategory.todo:
         return _beginSimpleContent(
           context,
@@ -36,6 +35,8 @@ class CategoryDraftBuilder {
           rawText,
           intent: intent,
         );
+      case DraftCommandCategory.project:
+        return _beginProject(context, analysisText, rawText, intent: intent);
       case DraftCommandCategory.health:
         return _beginHealth(context, analysisText, rawText, intent: intent);
     }
@@ -105,6 +106,38 @@ class CategoryDraftBuilder {
       status: DraftCommandStatus.ready,
       category: category,
       title: entities.title,
+      memoType: entities.memoType,
+    );
+    return BrainResultComposer.compose(
+      context: context,
+      draft: draft,
+      messages: const [
+        BrainMessage(_readyReplyText, type: ChatMessageType.summary),
+      ],
+      turnType: BrainTurnType.newTopic,
+      changedFields: _changedFields(entities),
+      intent: intent,
+      entities: entities,
+    );
+  }
+
+  BrainResult _beginProject(
+    BrainContext context,
+    String analysisText,
+    String rawText, {
+    IntentResult? intent,
+  }) {
+    final entities = context.entityAnalyzer.extract(
+      DraftCommandCategory.project,
+      analysisText,
+    );
+    final draft = DraftCommand(
+      originalText: rawText,
+      status: DraftCommandStatus.ready,
+      category: DraftCommandCategory.project,
+      title: entities.title,
+      projectAction: entities.projectAction,
+      progress: entities.progress,
     );
     return BrainResultComposer.compose(
       context: context,
@@ -159,6 +192,9 @@ class CategoryDraftBuilder {
     if (entities.location != null) changed.add('location');
     if (entities.title != null) changed.add('title');
     if (entities.healthItem != null) changed.add('healthItem');
+    if (entities.memoType != null) changed.add('memoType');
+    if (entities.projectAction != null) changed.add('projectAction');
+    if (entities.progress != null) changed.add('progress');
     return changed;
   }
 }

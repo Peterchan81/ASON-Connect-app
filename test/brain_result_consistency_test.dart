@@ -26,12 +26,8 @@ void main() {
   });
 
   test('수정 턴에서는 실제로 바뀐 필드만 changedFields로 돌아온다', () {
-    final started = engine.process(
-      BrainInput(text: '내일 오후 3시에 김 과장과 미팅'),
-    );
-    final ready = engine.process(
-      BrainInput(text: '없음', draft: started.draft),
-    );
+    final started = engine.process(BrainInput(text: '내일 오후 3시에 김 과장과 미팅'));
+    final ready = engine.process(BrainInput(text: '없음', draft: started.draft));
     final editing = ready.draft!.copyWith(status: DraftCommandStatus.editing);
 
     final corrected = engine.process(

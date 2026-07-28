@@ -189,10 +189,7 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
 
     // 인식된 문장을 전달했다는 표시(success)는 VoiceService가 이미 보여주고 있습니다.
     setState(() {
-      _conversationManager.handleUserText(
-        text,
-        inputSource: InputSource.voice,
-      );
+      _conversationManager.handleUserText(text, inputSource: InputSource.voice);
       _textController.clear();
     });
     _scrollToBottom();

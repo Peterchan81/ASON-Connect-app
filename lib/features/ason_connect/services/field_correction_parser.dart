@@ -9,7 +9,8 @@ import '../models/draft_command.dart';
 class FieldCorrection {
   const FieldCorrection({required this.field, required this.newValue});
 
-  /// 'date' | 'time' | 'location' | 'title' | 'healthItem' | 'alarm' | 'repeat' | 'memo'
+  /// 'date' | 'time' | 'location' | 'title' | 'healthItem' | 'alarm' | 'repeat' | 'memo' |
+  /// 'memoType' | 'projectAction' | 'progress'
   final String field;
   final String newValue;
 }
@@ -27,6 +28,9 @@ class FieldCorrectionParser {
     '알림': 'alarm',
     '반복': 'repeat',
     '메모': 'memo',
+    '종류': 'memoType',
+    '활동': 'projectAction',
+    '진행률': 'progress',
   };
 
   // "없어/없음/필요없다"처럼, 알림·반복을 끄고 싶다는 의사를 나타내는 표현입니다.
@@ -37,7 +41,19 @@ class FieldCorrectionParser {
   /// "시간을 오후 4시로 바꿔줘"처럼, 수정 대화에서 사용자가 말한 내용을 해석합니다.
   /// [availableFields]는 지금 카테고리에서 수정할 수 있는 항목 key 목록입니다.
   FieldCorrection? parse(String text, List<String> availableFields) {
-    const labelOrder = ['날짜', '시간', '장소', '항목', '내용', '알림', '메모', '반복'];
+    const labelOrder = [
+      '날짜',
+      '시간',
+      '장소',
+      '항목',
+      '내용',
+      '알림',
+      '메모',
+      '반복',
+      '진행률',
+      '활동',
+      '종류',
+    ];
 
     for (final label in labelOrder) {
       final field = _labelToFieldKey[label];
@@ -86,6 +102,12 @@ class FieldCorrectionParser {
         );
       case 'memo':
         return draft.copyWith(memo: correction.newValue);
+      case 'memoType':
+        return draft.copyWith(memoType: correction.newValue);
+      case 'projectAction':
+        return draft.copyWith(projectAction: correction.newValue);
+      case 'progress':
+        return draft.copyWith(progress: correction.newValue);
     }
     return draft;
   }

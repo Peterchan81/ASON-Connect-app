@@ -59,6 +59,17 @@ class HealthFieldExtractor {
       );
     }
 
+    final medicationMatch = ClassificationScorer.medicationPattern.firstMatch(
+      text,
+    );
+    if (medicationMatch != null) {
+      return HealthExtraction(
+        date: date,
+        item: '복용',
+        value: medicationMatch.group(1)!,
+      );
+    }
+
     final exerciseMatch = ClassificationScorer.exercisePattern.firstMatch(text);
     if (exerciseMatch != null) {
       return HealthExtraction(

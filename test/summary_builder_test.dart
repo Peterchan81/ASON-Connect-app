@@ -81,7 +81,7 @@ void main() {
   });
 
   group('메모 요약/SyncPayload', () {
-    test('메모는 내용 한 줄만 보여준다', () {
+    test('메모는 종류(기본값 일반) -> 내용 순서로 보여준다', () {
       final draft = DraftCommand(
         originalText: '우유하고 계란 사야 해',
         status: DraftCommandStatus.ready,
@@ -90,13 +90,63 @@ void main() {
       );
 
       final rows = builder.rows(draft);
-      expect(rows.length, 1);
-      expect(rows.single.key, '내용');
-      expect(rows.single.value, '우유와 계란 구매');
+      expect(rows.map((e) => e.key).toList(), ['종류', '내용']);
+      expect(rows[0].value, '일반');
+      expect(rows[1].value, '우유와 계란 구매');
 
       final payload = builder.payload(draft);
       expect(payload.category, '메모');
       expect(payload.content, '우유와 계란 구매');
+      expect(payload.subType, '일반');
+    });
+
+    test('아이디어 메모는 종류가 "아이디어"로 표시된다', () {
+      final draft = DraftCommand(
+        originalText: '아이디어 메모, ASON 음성 앱 개선',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.memo,
+        title: 'ASON 음성 앱 개선',
+        memoType: '아이디어',
+      );
+
+      final rows = builder.rows(draft);
+      expect(rows[0].value, '아이디어');
+    });
+  });
+
+  group('프로젝트 요약/SyncPayload', () {
+    test('활동 기본값은 "생성"이고, 진행률이 없으면 행에 나타나지 않는다', () {
+      final draft = DraftCommand(
+        originalText: '새 프로젝트 시작: ASON 리브랜딩',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.project,
+        title: 'ASON 리브랜딩',
+      );
+
+      final rows = builder.rows(draft);
+      expect(rows.map((e) => e.key).toList(), ['활동', '내용']);
+      expect(rows[0].value, '생성');
+      expect(rows[1].value, 'ASON 리브랜딩');
+    });
+
+    test('진행률이 있으면 활동 -> 내용 -> 진행률 순서로 보여준다', () {
+      final draft = DraftCommand(
+        originalText: 'ASON 리브랜딩 진행률 60%로 수정',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.project,
+        title: 'ASON 리브랜딩',
+        projectAction: '수정',
+        progress: '60%',
+      );
+
+      final rows = builder.rows(draft);
+      expect(rows.map((e) => e.key).toList(), ['활동', '내용', '진행률']);
+      expect(rows[0].value, '수정');
+      expect(rows[2].value, '60%');
+
+      final payload = builder.payload(draft);
+      expect(payload.subType, '수정');
+      expect(payload.progress, '60%');
     });
   });
 }

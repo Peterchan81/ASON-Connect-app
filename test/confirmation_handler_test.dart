@@ -11,9 +11,7 @@ void main() {
   final engine = BrainEngine();
 
   test('확인: 후보 중 하나를 이름으로 답하면 그 카테고리로 draft가 시작된다', () {
-    final ambiguous = engine.process(
-      BrainInput(text: '아이디어 메모, ASON 음성 앱 개선'),
-    );
+    final ambiguous = engine.process(BrainInput(text: '아이디어 메모, ASON 음성 앱 개선'));
     expect(ambiguous.draft?.status, DraftCommandStatus.clarifyingCategory);
     expect(ambiguous.draft?.candidateCategories, isNotEmpty);
 
@@ -26,9 +24,7 @@ void main() {
   });
 
   test('후보 이름과 무관한 답변은 첫 번째 후보로 처리된다 (실제 취소 경로는 없음)', () {
-    final ambiguous = engine.process(
-      BrainInput(text: '아이디어 메모, ASON 음성 앱 개선'),
-    );
+    final ambiguous = engine.process(BrainInput(text: '아이디어 메모, ASON 음성 앱 개선'));
     final candidates = ambiguous.draft!.candidateCategories;
     expect(candidates.length, 2);
 

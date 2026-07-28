@@ -11,6 +11,8 @@ class SyncPayload {
     this.alarm,
     this.repeat,
     this.memo,
+    this.subType,
+    this.progress,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -35,6 +37,12 @@ class SyncPayload {
   /// 메모입니다. 값이 없으면 "-"입니다.
   final String? memo;
 
+  /// 카테고리별 부가 분류입니다. 메모는 종류(일반/아이디어), 프로젝트는 활동(생성/수정/삭제)입니다.
+  final String? subType;
+
+  /// 프로젝트 진행률입니다. 예: "60%"
+  final String? progress;
+
   /// 이 내용이 처음 만들어진 시각입니다.
   final DateTime createdAt;
 
@@ -50,6 +58,8 @@ class SyncPayload {
     'alarm': alarm,
     'repeat': repeat,
     'memo': memo,
+    'subType': subType,
+    'progress': progress,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };

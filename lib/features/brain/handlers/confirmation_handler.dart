@@ -42,6 +42,11 @@ class ConfirmationHandler implements BrainTurnHandler {
     final analysisText = context.locationService.fixSpacingArtifacts(
       draft.originalText,
     );
-    return draftBuilder.begin(context, chosen, analysisText, draft.originalText);
+    return draftBuilder.begin(
+      context,
+      chosen,
+      analysisText,
+      draft.originalText,
+    );
   }
 }

@@ -32,7 +32,8 @@ class ScheduleContinuationHandler implements BrainTurnHandler {
       return _resolveLocationConfirmation(context, draft, rawAnswer);
     }
 
-    final batch = context.questionPlanner.plan(draft)?.fields ?? const <String>[];
+    final batch =
+        context.questionPlanner.plan(draft)?.fields ?? const <String>[];
     if (batch.isEmpty) {
       return BrainResultComposer.compose(
         context: context,
@@ -57,7 +58,8 @@ class ScheduleContinuationHandler implements BrainTurnHandler {
     for (var i = 0; i < answerCount; i++) {
       final field = batch[i];
       // 알림 질문에 "아니요"처럼 거절 의사를 밝히면 "없음"으로 정리합니다.
-      final value = field == 'alarm' && context.heuristics.isNegative(segments[i])
+      final value =
+          field == 'alarm' && context.heuristics.isNegative(segments[i])
           ? '없음'
           : segments[i];
       updated = context.parser.assignScheduleField(updated, field, value);
@@ -93,7 +95,11 @@ class ScheduleContinuationHandler implements BrainTurnHandler {
       );
     } else {
       // 그 외 응답은 사용자가 직접 말해준 새 지명으로 보고 그대로 사용합니다.
-      updated = context.parser.assignScheduleField(draft, 'location', rawAnswer);
+      updated = context.parser.assignScheduleField(
+        draft,
+        'location',
+        rawAnswer,
+      );
     }
 
     return _finishTurn(context, updated, changedFields: changed);
@@ -111,10 +117,7 @@ class ScheduleContinuationHandler implements BrainTurnHandler {
         context: context,
         draft: ready,
         messages: const [
-          BrainMessage(
-            'ASON에 다음 내용만 동기화합니다.',
-            type: ChatMessageType.summary,
-          ),
+          BrainMessage('ASON에 다음 내용만 동기화합니다.', type: ChatMessageType.summary),
         ],
         turnType: BrainTurnType.scheduleContinuation,
         changedFields: changedFields,

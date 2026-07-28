@@ -33,6 +33,15 @@ void main() {
       expect(result.date, '내일');
       expect(result.title, isNull);
     });
+
+    test('"내일 오후 3시에 병원 예약"은 날짜/시간/제목을 모두 뽑아낸다', () {
+      final result = parser.extractScheduleFields('내일 오후 3시에 병원 예약');
+
+      expect(result.date, '내일');
+      expect(result.time, '오후 3시');
+      expect(result.title, '병원 예약');
+      expect(result.location, isNull);
+    });
   });
 
   group('일정 장소 추출', () {
@@ -86,6 +95,20 @@ void main() {
 
       expect(result.item, '증상');
       expect(result.value, '머리가 아프다');
+    });
+
+    test('약 복용을 인식한다', () {
+      final result = parser.extractHealthFields('오늘 아침에 혈압약 먹었어');
+
+      expect(result.item, '복용');
+      expect(result.value, '혈압약');
+    });
+
+    test('영양제 복용도 인식한다', () {
+      final result = parser.extractHealthFields('영양제 먹었다');
+
+      expect(result.item, '복용');
+      expect(result.value, '영양제');
     });
   });
 

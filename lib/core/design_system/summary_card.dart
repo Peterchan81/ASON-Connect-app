@@ -40,6 +40,9 @@ class SummaryCard extends StatelessWidget {
     '반복': Icons.repeat_rounded,
     '메모': Icons.sticky_note_2_rounded,
     '항목': Icons.favorite_rounded,
+    '종류': Icons.category_rounded,
+    '활동': Icons.flag_rounded,
+    '진행률': Icons.trending_up_rounded,
   };
 
   @override
@@ -133,9 +136,12 @@ class SummaryCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           SizedBox(
-            width: 40,
+            width: 48,
             child: Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+              softWrap: false,
               style: TextStyle(
                 fontSize: 13,
                 color: AsonColors.primary.withValues(alpha: 0.7),

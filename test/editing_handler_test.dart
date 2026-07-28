@@ -11,9 +11,7 @@ void main() {
   final engine = BrainEngine();
 
   DraftCommand readyScheduleDraft() {
-    final started = engine.process(
-      BrainInput(text: '내일 오후 3시에 김 과장과 미팅'),
-    );
+    final started = engine.process(BrainInput(text: '내일 오후 3시에 김 과장과 미팅'));
     final afterAlarm = engine.process(
       BrainInput(text: '없음', draft: started.draft),
     );

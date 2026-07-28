@@ -34,5 +34,24 @@ void main() {
     expect(result.draft?.category, DraftCommandCategory.memo);
     expect(result.draft?.status, DraftCommandStatus.ready);
     expect(result.draft?.title, '우유와 계란 구매');
+    expect(result.draft?.memoType, '일반');
+  });
+
+  test('약 복용 문장은 곧바로 ready 상태의 건강 draft를 만든다', () {
+    final result = engine.process(BrainInput(text: '오늘 아침에 혈압약 먹었어'));
+
+    expect(result.draft?.category, DraftCommandCategory.health);
+    expect(result.draft?.status, DraftCommandStatus.ready);
+    expect(result.draft?.healthItem, '복용');
+    expect(result.draft?.title, '혈압약');
+  });
+
+  test('프로젝트 문장은 곧바로 ready 상태의 draft를 만든다', () {
+    final result = engine.process(BrainInput(text: '새 프로젝트 시작: ASON 리브랜딩'));
+
+    expect(result.draft?.category, DraftCommandCategory.project);
+    expect(result.draft?.status, DraftCommandStatus.ready);
+    expect(result.draft?.title, 'ASON 리브랜딩');
+    expect(result.draft?.projectAction, '생성');
   });
 }

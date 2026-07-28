@@ -41,7 +41,8 @@ class EditingHandler implements BrainTurnHandler {
     }
 
     final updated = context.parser.applyFieldCorrection(draft, correction);
-    final label = CommandParserService.fieldKeyToLabel[correction.field] ?? '내용';
+    final label =
+        CommandParserService.fieldKeyToLabel[correction.field] ?? '내용';
     // 실제로 저장된 값을 기준으로 안내합니다. (예: "없어" -> "없음"으로 정리된 경우 반영)
     final appliedValue =
         context.parser.scheduleFieldValue(updated, correction.field) ??
@@ -82,7 +83,9 @@ class EditingHandler implements BrainTurnHandler {
       case DraftCommandCategory.health:
         return const ['date', 'healthItem', 'title'];
       case DraftCommandCategory.memo:
+        return const ['title', 'memoType'];
       case DraftCommandCategory.project:
+        return const ['title', 'projectAction', 'progress'];
       case DraftCommandCategory.todo:
         return const ['title'];
       case null:

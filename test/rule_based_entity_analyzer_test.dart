@@ -31,6 +31,38 @@ void main() {
     final result = analyzer.extract(DraftCommandCategory.memo, '우유하고 계란 사야 해');
 
     expect(result.title, '우유와 계란 구매');
+    expect(result.memoType, '일반');
+  });
+
+  test('아이디어 표현이 있는 메모는 memoType이 "아이디어"다', () {
+    final result = analyzer.extract(
+      DraftCommandCategory.memo,
+      '아이디어 메모, ASON 음성 앱 개선',
+    );
+
+    expect(result.memoType, '아이디어');
+  });
+
+  test('프로젝트 문장은 활동(기본 생성)과 진행률을 뽑아낸다', () {
+    final created = analyzer.extract(
+      DraftCommandCategory.project,
+      '새 프로젝트 시작: ASON 리브랜딩',
+    );
+    expect(created.projectAction, '생성');
+    expect(created.progress, isNull);
+
+    final updated = analyzer.extract(
+      DraftCommandCategory.project,
+      'ASON 리브랜딩 진행률 60%로 수정',
+    );
+    expect(updated.projectAction, '수정');
+    expect(updated.progress, '60%');
+
+    final deleted = analyzer.extract(
+      DraftCommandCategory.project,
+      'ASON 리브랜딩 프로젝트 삭제',
+    );
+    expect(deleted.projectAction, '삭제');
   });
 
   test('건강 문장에서 항목과 수치를 뽑아낸다', () {

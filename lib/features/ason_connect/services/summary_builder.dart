@@ -31,7 +31,19 @@ class SummaryBuilder {
           MapEntry('날짜', draft.date ?? '-'),
         ];
       case DraftCommandCategory.memo:
+        return [
+          MapEntry('종류', draft.memoType ?? '일반'),
+          MapEntry('내용', draft.title ?? '-'),
+        ];
       case DraftCommandCategory.project:
+        final rows = [
+          MapEntry('활동', draft.projectAction ?? '생성'),
+          MapEntry('내용', draft.title ?? '-'),
+        ];
+        if ((draft.progress ?? '').trim().isNotEmpty) {
+          rows.add(MapEntry('진행률', draft.progress!));
+        }
+        return rows;
       case DraftCommandCategory.todo:
         return [MapEntry('내용', draft.title ?? '-')];
     }
@@ -74,7 +86,22 @@ class SummaryBuilder {
           updatedAt: draft.updatedAt,
         );
       case DraftCommandCategory.memo:
+        return SyncPayload(
+          category: category.label,
+          content: draft.title ?? '-',
+          subType: draft.memoType ?? '일반',
+          createdAt: draft.createdAt,
+          updatedAt: draft.updatedAt,
+        );
       case DraftCommandCategory.project:
+        return SyncPayload(
+          category: category.label,
+          content: draft.title ?? '-',
+          subType: draft.projectAction ?? '생성',
+          progress: draft.progress,
+          createdAt: draft.createdAt,
+          updatedAt: draft.updatedAt,
+        );
       case DraftCommandCategory.todo:
         return SyncPayload(
           category: category.label,

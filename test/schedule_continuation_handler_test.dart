@@ -11,9 +11,7 @@ void main() {
   test('시간/알림 배치 질문에 답하면 두 필드가 함께 채워지고 ready가 된다', () {
     final engine = BrainEngine();
 
-    final started = engine.process(
-      BrainInput(text: '내일 둔산동에서 김 과장과 미팅'),
-    );
+    final started = engine.process(BrainInput(text: '내일 둔산동에서 김 과장과 미팅'));
     expect(started.draft?.status, DraftCommandStatus.collecting);
     expect(started.missingFields, containsAll(['time', 'alarm']));
 
