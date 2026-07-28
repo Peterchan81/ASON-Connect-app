@@ -48,17 +48,12 @@ class ConversationManager {
     required this._syncService,
     required this._coreSyncMapper,
     required this._brain,
-  }) {
-    _addAson(_greetingText);
-  }
+  });
 
   final MockSyncService _syncService;
   final CoreSyncMapper _coreSyncMapper;
   final BrainEngine _brain;
   final SummaryBuilder _summaryBuilder = const SummaryBuilder();
-
-  static const String _greetingText =
-      '안녕하세요.\n일정, 메모, 건강에 관한 내용을 말씀해 주세요.\nASON 통합 시스템에 정리해서 공유해 드리겠습니다.';
 
   final List<ChatMessage> _messages = [];
 
@@ -107,6 +102,37 @@ class ConversationManager {
   /// 마지막 동기화 시도가 실패/중복이었다면 그 이유입니다. 성공하거나 아직
   /// 시도하지 않았으면 null입니다. 실시간 정리 패널이 이 값을 보여줍니다.
   String? get lastSyncError => _lastSyncError;
+
+  /// 정보가 부족해 ASON이 되묻는 중이거나(정보 수집/분류/수정 답변 대기)일
+  /// 때, 지금 사용자에게 보여줄 질문 문구입니다. 별도의 채팅 이력 없이, 이
+  /// 값 하나를 정리 패널 안에 표시합니다. 되묻는 중이 아니면(정보가
+  /// 충분하거나 아직 아무 것도 입력하지 않았으면) null입니다.
+  String? get pendingQuestion {
+    final draft = _draft;
+    if (draft == null) return null;
+    if (draft.status != DraftCommandStatus.collecting &&
+        draft.status != DraftCommandStatus.clarifyingCategory &&
+        draft.status != DraftCommandStatus.editing) {
+      return null;
+    }
+    return _lastAsonMessageText;
+  }
+
+  /// 분류가 아직 없어(따라서 draft가 없어) 정리 패널을 보여줄 수 없을 때도
+  /// 사용자에게 전할 안내가 있으면 그 문구입니다. (예: 애매한 일반 대화에
+  /// 대한 안내) draft가 있으면 그 안에서 이미 보여주므로 null입니다.
+  String? get standaloneGuidance {
+    if (_draft != null) return null;
+    return _lastAsonMessageText;
+  }
+
+  String? get _lastAsonMessageText {
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      final message = _messages[i];
+      if (message.sender == ChatSender.ason) return message.text;
+    }
+    return null;
+  }
 
   /// 사용자가 문자 또는 음성으로 전달한 문장 하나를 처리합니다.
   /// [inputSource]는 이 문장이 음성/문자 중 어디서 왔는지이며, BrainEngine에 그대로
@@ -241,13 +267,13 @@ class ConversationManager {
     }
   }
 
-  /// 새 내용 입력 버튼: 대화, 작성 중이던 내용, 입력 상태를 모두 초기화합니다.
-  /// 대화는 어디에도 저장하지 않으므로, 초기화하면 그대로 사라집니다.
+  /// 동기화가 끝나면(성공/새 입력 시작) 대화, 작성 중이던 내용, 입력 상태를
+  /// 모두 초기화합니다. 대화는 어디에도 저장하지 않으므로, 초기화하면 그대로
+  /// 사라집니다.
   void reset() {
     _messages.clear();
     _draft = null;
     _lastSyncError = null;
-    _addAson(_greetingText);
   }
 
   void _addUser(String text) {

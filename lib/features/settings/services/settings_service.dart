@@ -3,13 +3,12 @@
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 설정 화면에서 고를 수 있는 테마입니다. 선택하면 ThemeController를 통해
-/// 앱 전체(다크/라이트/시스템)에 즉시 반영되고, 여기 저장된 값으로 다음
-/// 실행에도 유지됩니다.
+/// 설정 화면(화면 변경)에서 고를 수 있는 테마입니다. 선택하면 ThemeController를
+/// 통해 앱 전체(다크/라이트)에 즉시 반영되고, 여기 저장된 값으로 다음 실행에도
+/// 유지됩니다.
 enum AppThemeMode {
   dark('다크 모드'),
-  light('라이트 모드'),
-  system('시스템 설정');
+  light('라이트 모드');
 
   const AppThemeMode(this.label);
   final String label;

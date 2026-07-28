@@ -32,40 +32,46 @@ class GlowButton extends StatelessWidget {
 
   bool get _isDisabled => onPressed == null || isLoading;
 
-  Color get _background {
+  Color _backgroundFor(bool isLight) {
     switch (variant) {
       case GlowButtonVariant.filled:
         return _isDisabled ? color.withValues(alpha: 0.3) : color;
       case GlowButtonVariant.dark:
-        return AsonColors.surfaceNavyLight;
+        return isLight ? AsonColors.lightSurface : AsonColors.surfaceNavyLight;
       case GlowButtonVariant.outline:
       case GlowButtonVariant.text:
         return Colors.transparent;
     }
   }
 
-  Color get _foreground {
+  Color _foregroundFor(bool isLight) {
     switch (variant) {
       case GlowButtonVariant.filled:
         return Colors.white;
       case GlowButtonVariant.dark:
-        return Colors.white.withValues(alpha: 0.85);
+        return isLight
+            ? AsonColors.lightTextPrimary
+            : Colors.white.withValues(alpha: 0.85);
       case GlowButtonVariant.outline:
         return color;
       case GlowButtonVariant.text:
-        return Colors.white70;
+        return isLight ? AsonColors.lightTextSecondary : Colors.white70;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final background = _backgroundFor(isLight);
+    final foreground = _foregroundFor(isLight);
+
     final content = isLoading
         ? SizedBox(
             width: 20,
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2.2,
-              valueColor: AlwaysStoppedAnimation(_foreground),
+              valueColor: AlwaysStoppedAnimation(foreground),
             ),
           )
         : Row(
@@ -73,7 +79,7 @@ class GlowButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 18, color: _foreground),
+                Icon(icon, size: 18, color: foreground),
                 const SizedBox(width: 8),
               ],
               Flexible(
@@ -83,7 +89,7 @@ class GlowButton extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: _foreground,
+                    color: foreground,
                   ),
                 ),
               ),
@@ -91,7 +97,7 @@ class GlowButton extends StatelessWidget {
           );
 
     final button = Material(
-      color: _background,
+      color: background,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -108,7 +114,9 @@ class GlowButton extends StatelessWidget {
                 color: color.withValues(alpha: 0.6),
               ),
               GlowButtonVariant.dark => Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: isLight
+                    ? Colors.black.withValues(alpha: 0.1)
+                    : Colors.white.withValues(alpha: 0.1),
               ),
               GlowButtonVariant.filled || GlowButtonVariant.text => null,
             },

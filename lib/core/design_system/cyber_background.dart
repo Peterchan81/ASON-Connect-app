@@ -11,23 +11,14 @@ import 'animated_grid.dart';
 import 'ason_colors.dart';
 
 class CyberBackground extends StatelessWidget {
-  const CyberBackground({
-    super.key,
-    this.animate = false,
-    this.child,
-    this.forceDark = false,
-  });
+  const CyberBackground({super.key, this.animate = false, this.child});
 
   final bool animate;
   final Widget? child;
 
-  /// true면 앱 테마 설정과 무관하게 항상 다크 배경으로 그립니다.
-  final bool forceDark;
-
   @override
   Widget build(BuildContext context) {
-    final isLight =
-        !forceDark && Theme.of(context).brightness == Brightness.light;
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return Stack(
       fit: StackFit.expand,
       children: [

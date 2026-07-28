@@ -21,12 +21,19 @@ class HudPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: AsonColors.surfaceNavy.withValues(alpha: 0.5),
+        color: isLight
+            ? AsonColors.lightSurface
+            : AsonColors.surfaceNavy.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(
+          color: isLight
+              ? Colors.black.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.08),
+        ),
       ),
       child: HudCornerOverlay(accentColor: accentColor, child: child),
     );

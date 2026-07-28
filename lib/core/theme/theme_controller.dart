@@ -1,4 +1,4 @@
-// 앱 전체의 테마(다크/라이트/시스템) 상태를 들고 있는 컨트롤러입니다.
+// 앱 전체의 테마(다크/라이트) 상태를 들고 있는 컨트롤러입니다.
 // 설정 화면에서 테마를 바꾸면 이 컨트롤러가 notifyListeners()로 알리고,
 // MaterialApp(app.dart)이 이를 구독해 즉시 다시 그립니다. 값은
 // SettingsService를 통해 SharedPreferences에 저장되어, 앱을 다시 실행해도
@@ -23,8 +23,6 @@ class ThemeController extends ChangeNotifier {
         return ThemeMode.dark;
       case AppThemeMode.light:
         return ThemeMode.light;
-      case AppThemeMode.system:
-        return ThemeMode.system;
     }
   }
 

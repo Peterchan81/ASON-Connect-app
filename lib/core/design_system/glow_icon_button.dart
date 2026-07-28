@@ -25,8 +25,16 @@ class GlowIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final unfilledTint = isLight
+        ? Colors.black.withValues(alpha: 0.05)
+        : Colors.white.withValues(alpha: 0.06);
+    final unfilledIconColor = isLight
+        ? AsonColors.lightTextSecondary
+        : Colors.white70;
+
     final button = Material(
-      color: filled ? color : Colors.white.withValues(alpha: 0.06),
+      color: filled ? color : unfilledTint,
       shape: const CircleBorder(),
       child: InkWell(
         onTap: onPressed,
@@ -37,7 +45,7 @@ class GlowIconButton extends StatelessWidget {
           child: Icon(
             icon,
             size: size * 0.42,
-            color: filled ? Colors.white : Colors.white70,
+            color: filled ? Colors.white : unfilledIconColor,
           ),
         ),
       ),

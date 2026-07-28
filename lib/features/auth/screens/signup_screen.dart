@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/design_system/design_system.dart';
+import '../../ason_connect/screens/ason_connect_screen.dart';
 import '../data/terms/marketing_terms.dart';
 import '../data/terms/privacy_terms.dart';
 import '../data/terms/service_terms.dart';
@@ -170,9 +171,20 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    // 회원가입 완료 후에는 로그인 화면으로 돌아갑니다. (자동 로그인 여부는 로그인
-    // 화면에서 사용자가 다시 선택하는 기존 로그인 구조를 그대로 유지합니다)
-    Navigator.of(context).pop(true);
+    // 회원가입 -> 자동 로그인 -> 바로 Connect 입력 화면으로 이동합니다.
+    // (로그인 화면을 다시 거치지 않습니다) 스택에 로그인/회원가입 화면이
+    // 남지 않도록 전체를 Connect 화면으로 교체합니다.
+    await AuthService.instance.login(
+      id: _idController.text.trim(),
+      password: _passwordController.text,
+      keepSignedIn: true,
+    );
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const AsonConnectScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -181,7 +193,6 @@ class _SignupScreenState extends State<SignupScreen> {
       forceDark: true,
       appBar: CyberTopBar(
         title: '회원가입',
-        forceDark: true,
         leading: GlowIconButton(
           icon: Icons.arrow_back_rounded,
           onPressed: () => Navigator.of(context).pop(false),

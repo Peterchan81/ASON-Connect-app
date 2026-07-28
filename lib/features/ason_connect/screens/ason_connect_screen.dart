@@ -1,6 +1,8 @@
-// ASON Connect의 대화창 화면입니다.
-// 입력 방식 선택, 문자·음성 입력, 대화, 부족한 정보 질문, 최종 확인, 수정, 동기화까지
-// 이 화면 하나에서 모두 처리합니다. (앱에는 이 화면과 SplashScreen, 두 화면만 존재합니다)
+// ASON Connect의 메인(유일한) 입력 화면입니다.
+// 흐름은 정확히 다음과 같습니다: 음성 또는 키보드 입력 -> 자동 분석 및 정리
+// -> 사용자 확인 -> 수정 또는 동기화 -> 입력 초기화. 이 흐름 밖의 단계(홈 허브,
+// 기능 선택, 채팅 이력 등)는 두지 않습니다. (앱에는 이 화면과 SplashScreen,
+// 두 화면만 존재합니다)
 
 import 'dart:async';
 
@@ -13,7 +15,6 @@ import '../../settings/screens/settings_screen.dart';
 import '../models/draft_command.dart';
 import '../models/voice_mic_phase.dart';
 import '../services/conversation_manager.dart';
-import '../widgets/chat_area.dart';
 import '../widgets/input_area.dart';
 
 class AsonConnectScreen extends StatefulWidget {
@@ -25,14 +26,14 @@ class AsonConnectScreen extends StatefulWidget {
 
 class _AsonConnectScreenState extends State<AsonConnectScreen> {
   final TextEditingController _textController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
   final ConversationManager _conversationManager = ConversationManager();
   final VoiceService _voiceService = VoiceService(
     provider: SpeechRecognitionProvider(),
   );
 
-  // 입력 방식은 이번 세션에서만 유지합니다. (기기에 저장하지 않고, 앱을 다시 실행하면 다시 고릅니다)
-  AsonInputMode? _inputMode;
+  // 입력 방식은 이번 세션에서만 유지합니다(기기에 저장하지 않음). 선택 화면
+  // 없이 곧바로 사용할 수 있도록 키보드 모드로 시작합니다.
+  AsonInputMode _inputMode = AsonInputMode.keyboard;
 
   // 마이크 버튼이 연속으로 눌려도 중복 처리되지 않게 막는 잠금 장치입니다.
   bool _isHandlingVoiceTap = false;
@@ -40,8 +41,8 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
   Timer? _successResetTimer;
 
   // 아직 전송하지 않은 문장을 실시간으로 미리 분석해, 입력창 바로 위 패널에
-  // 보여주기 위한 상태입니다. (전송 전까지는 채팅 이력/실제 draft에 반영되지
-  // 않는 순수 미리보기)
+  // 보여주기 위한 상태입니다. (전송 전까지는 실제 draft에 반영되지 않는
+  // 순수 미리보기)
   Timer? _previewDebounce;
   DraftCommand? _livePreviewDraft;
 
@@ -59,7 +60,6 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
     _previewDebounce?.cancel();
     _textController.removeListener(_handleTextChangedForPreview);
     _textController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -99,22 +99,6 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
     }
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
-    });
-  }
-
-  /// 입력 방식을 처음 고를 때 호출됩니다. 이후에는 ModeSwitchButton으로만 바뀝니다.
-  void _selectInputMode(AsonInputMode mode) {
-    setState(() => _inputMode = mode);
-  }
-
   void _toggleInputMode() {
     setState(() {
       _inputMode = _inputMode == AsonInputMode.voice
@@ -138,7 +122,6 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
     });
 
     FocusScope.of(context).unfocus();
-    _scrollToBottom();
   }
 
   /// 수정 버튼: 내용을 지우지 않고, ASON이 무엇을 바꿀지 되묻습니다.
@@ -146,36 +129,37 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
     setState(() {
       _conversationManager.beginEdit();
     });
-    _scrollToBottom();
   }
 
-  /// ASON에 동기화 버튼: 처리 중 표시를 먼저 보여준 뒤, 가상 동기화를 수행합니다.
+  /// ASON에 동기화 버튼: 동기화를 수행하고, 성공하면 짧게 안내한 뒤 곧바로
+  /// 입력창과 결과 카드를 초기화합니다. 실패하면 카드에 이유를 남기고
+  /// 그대로 유지합니다(다시 수정하거나 재시도할 수 있도록).
   Future<void> _handleSync() async {
     setState(() {
       _conversationManager.beginSync();
     });
-    _scrollToBottom();
 
     await _conversationManager.finishSync();
 
     if (!mounted) return;
-    setState(() {});
-    _scrollToBottom();
+
+    if (_conversationManager.lastSyncError == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ASON에 저장되었습니다.')));
+      setState(() {
+        _conversationManager.reset();
+        _textController.clear();
+      });
+    } else {
+      setState(() {});
+    }
   }
 
   void _openSettings() {
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (context) => const SettingsScreen()));
-  }
-
-  /// 새 내용 입력 버튼: 대화와 작성 중이던 내용을 모두 초기화합니다.
-  /// 대화는 어디에도 저장하지 않으므로, 초기화하면 그대로 사라집니다.
-  void _handleNewInput() {
-    setState(() {
-      _conversationManager.reset();
-      _textController.clear();
-    });
   }
 
   /// 마이크 버튼을 눌렀을 때 실행됩니다.
@@ -196,12 +180,7 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
   void _handleSpeechResult(String recognizedText, bool isFinal) {
     if (!mounted) return;
 
-    // TextField가 controller 변화를 직접 구독하므로, 인식 중간 결과 표시는
-    // 화면 전체를 다시 그리는 setState 없이 controller만 갱신하면 됩니다.
-    _textController.text = recognizedText;
-    _textController.selection = TextSelection.collapsed(
-      offset: recognizedText.length,
-    );
+    setState(() => _textController.text = recognizedText);
 
     if (!isFinal) return;
 
@@ -219,7 +198,6 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
       _livePreviewDraft = null;
       _textController.clear();
     });
-    _scrollToBottom();
 
     _successResetTimer?.cancel();
     _successResetTimer = Timer(const Duration(milliseconds: 700), () {
@@ -231,10 +209,6 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
   @override
   Widget build(BuildContext context) {
     final draft = _conversationManager.currentDraft;
-    final isSyncing =
-        draft != null && draft.status == DraftCommandStatus.syncing;
-    final showNewInputButton =
-        draft != null && draft.status == DraftCommandStatus.synced;
     final panelDraft = draft ?? _livePreviewDraft;
 
     return CyberScaffold(
@@ -253,74 +227,45 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
         ),
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // 360 이하 소형 모바일에서는 카드 좌우 여백을 살짝 줄여 내용 공간을 확보합니다.
-            final horizontalPadding = constraints.maxWidth <= 360 ? 8.0 : 14.0;
-
-            return Column(
-              children: [
-                Expanded(
-                  child: ChatArea(
-                    messages: _conversationManager.messages,
-                    scrollController: _scrollController,
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    '말하거나 입력해 주세요.\nASON이 내용을 정리합니다.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.6,
+                      color: AsonColors.onBackgroundMuted(context),
+                    ),
                   ),
                 ),
-                // 새 입력 버튼이 나타나거나 사라질 때 레이아웃이 뚝 끊기지 않고
-                // 부드럽게 높이가 바뀌도록 AnimatedSize로 감쌉니다. (일정 정리는
-                // 이제 이 큰 카드가 아니라 입력창 바로 위 컴팩트 패널이 담당합니다)
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOutCubic,
-                  alignment: Alignment.topCenter,
-                  child: Column(
-                    children: [
-                      if (showNewInputButton)
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            horizontalPadding,
-                            4,
-                            horizontalPadding,
-                            8,
-                          ),
-                          child: GlowButton(
-                            label: '새 내용 입력',
-                            onPressed: _handleNewInput,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  alignment: Alignment.topCenter,
-                  // 음성 상태(듣는 중/처리 중 등)는 이 부분에만 영향을 주므로,
-                  // 화면 전체가 아니라 여기만 다시 그리도록 범위를 좁힙니다.
-                  child: ValueListenableBuilder<VoiceState>(
-                    valueListenable: _voiceService.stateNotifier,
-                    builder: (context, voiceState, _) {
-                      return InputArea(
-                        inputMode: _inputMode,
-                        onModeSelected: _selectInputMode,
-                        controller: _textController,
-                        onSend: _handleSend,
-                        micPhase: _micPhaseFor(voiceState),
-                        onMicPressed: _onMicPressed,
-                        onToggleMode: _toggleInputMode,
-                        isSyncing: isSyncing,
-                        panelDraft: panelDraft,
-                        panelIsPreviewOnly: draft == null,
-                        panelSyncError: _conversationManager.lastSyncError,
-                        onPanelEdit: _handleEdit,
-                        onPanelSync: _handleSync,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
+              ),
+            ),
+            ValueListenableBuilder<VoiceState>(
+              valueListenable: _voiceService.stateNotifier,
+              builder: (context, voiceState, _) {
+                return InputArea(
+                  mode: _inputMode,
+                  onToggleMode: _toggleInputMode,
+                  controller: _textController,
+                  onSend: _handleSend,
+                  micPhase: _micPhaseFor(voiceState),
+                  onMicPressed: _onMicPressed,
+                  panelDraft: panelDraft,
+                  panelIsPreviewOnly: draft == null,
+                  panelPendingQuestion: _conversationManager.pendingQuestion,
+                  panelSyncError: _conversationManager.lastSyncError,
+                  onPanelEdit: _handleEdit,
+                  onPanelSync: _handleSync,
+                  standaloneGuidance: _conversationManager.standaloneGuidance,
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

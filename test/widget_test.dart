@@ -1,5 +1,8 @@
 // ASON Connect의 핵심 흐름을 확인하는 스모크 테스트입니다.
-// (Splash -> 자동 전환 -> ASON Connect 화면(입력 방식 선택 포함) -> 대화)
+// (Splash -> 자동 로그인 확인 -> 곧바로 Connect 입력 화면 -> 분석/수정/동기화)
+//
+// ASON Connect는 종류를 먼저 고르는 선택 화면이나 채팅 이력 없이, 입력창
+// 하나와 그 위의 컴팩트한 정리 패널만으로 동작합니다.
 //
 // 마이크 버튼의 Pulse, 배경의 Glow 등 화면에는 의도적으로 끝나지 않는(반복) 애니메이션이
 // 있어 pumpAndSettle()을 사용하면 타임아웃이 발생합니다. 대신 전환/등장 애니메이션이
@@ -15,8 +18,6 @@ import 'package:ason_voice_app/app.dart';
 import 'package:ason_voice_app/features/auth/services/auth_service.dart';
 
 /// AuthService가 저장하는 형태와 동일한, 이미 로그인/자동 로그인된 상태입니다.
-/// 로그인 화면과 무관하게 대화 기능만 검증하는 기존 테스트들이 곧바로
-/// ASON Connect 화면으로 들어갈 수 있도록 사용합니다.
 Map<String, Object> _autoLoggedInPrefs() => {
   'ason_is_logged_in': true,
   'ason_auto_login_enabled': true,
@@ -48,9 +49,6 @@ void _usePhoneViewport(WidgetTester tester) {
   addTearDown(tester.view.resetDevicePixelRatio);
 }
 
-/// Splash는 자동 로그인 정보가 있어야 곧바로 ASON Connect 화면으로 넘어갑니다.
-/// 대화 흐름 자체를 확인하는 테스트들은 로그인 화면부터 다시 검증할 필요가
-/// 없으므로, 매 테스트마다 자동 로그인된 계정을 미리 만들어 둡니다.
 Future<void> _seedAutoLogin() async {
   SharedPreferences.setMockInitialValues({});
   AuthService.instance.resetForTest();
@@ -67,21 +65,15 @@ Future<void> _seedAutoLogin() async {
   );
 }
 
-/// Splash의 3초 자동 전환을 통과시키고, 입력 방식으로 "키보드 입력"을 골라
-/// 곧바로 대화까지 진입합니다. 입력 방식은 이번 세션에서만 유지되며 기기에
-/// 저장하지 않으므로, 매번 새로 골라야 합니다.
-Future<void> _startChatInKeyboardMode(WidgetTester tester) async {
+/// Splash의 3초 자동 전환을 통과시켜, 곧바로 Connect 입력 화면으로 진입합니다.
+/// 종류/입력 방식을 먼저 고르는 단계가 없으므로, 진입하자마자 입력할 수 있습니다.
+Future<void> _startConnect(WidgetTester tester) async {
   await _seedAutoLogin();
   _usePhoneViewport(tester);
-  // 로그인 화면을 거치지 않고 곧바로 대화 기능을 검증하기 위해, 이미
-  // 자동 로그인된 상태로 시작합니다.
   SharedPreferences.setMockInitialValues(_autoLoggedInPrefs());
   await tester.pumpWidget(const AsonVoiceApp());
   await tester.pump();
   await tester.pump(const Duration(seconds: 3));
-  await _settle(tester);
-
-  await tester.tap(find.text('키보드 입력'));
   await _settle(tester);
 }
 
@@ -125,45 +117,27 @@ void main() {
     expect(find.text('ASON Connect'), findsNothing);
   });
 
-  testWidgets('자동 로그인 정보가 저장되어 있으면 로그인 화면을 건너뛰고 ASON Connect 화면으로 이동한다', (
+  testWidgets('자동 로그인 정보가 있으면 선택 화면 없이 곧바로 Connect 입력 화면으로 이동한다', (
     WidgetTester tester,
   ) async {
-    _usePhoneViewport(tester);
-    SharedPreferences.setMockInitialValues(_autoLoggedInPrefs());
-    await tester.pumpWidget(const AsonVoiceApp());
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 3));
-    await _settle(tester);
+    await _startConnect(tester);
 
     expect(find.text('ASON Connect'), findsOneWidget);
     expect(find.text('Voice & Text Input'), findsOneWidget);
     expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
 
-    // 아직 입력 방식을 고른 적이 없으므로, 대화 화면 하단에 선택 UI가 먼저 나옵니다.
-    expect(find.text('입력 방식을 선택하세요.'), findsOneWidget);
-    expect(find.text('음성 입력'), findsOneWidget);
-    expect(find.text('키보드 입력'), findsOneWidget);
-  });
-
-  testWidgets('입력 방식에서 키보드 입력을 고르면 곧바로 대화를 시작할 수 있다', (
-    WidgetTester tester,
-  ) async {
-    await _startChatInKeyboardMode(tester);
-
-    expect(find.text('입력 방식을 선택하세요.'), findsNothing);
+    // 종류/입력 방식을 먼저 고르는 화면 없이, 곧바로 입력창이 보입니다.
     expect(find.byType(TextField), findsOneWidget);
     expect(
-      find.text(
-        '안녕하세요.\n일정, 메모, 건강에 관한 내용을 말씀해 주세요.\nASON 통합 시스템에 정리해서 공유해 드리겠습니다.',
-      ),
+      find.text('말하거나 입력해 주세요.\nASON이 내용을 정리합니다.'),
       findsOneWidget,
     );
   });
 
-  testWidgets('일정 대화: 부족한 정보(시간/내용/알림)를 사람처럼 한 번에 하나씩 묻는다', (
+  testWidgets('일정 대화: 부족한 정보를 하나씩 묻고, 충분해지면 곧바로 컴팩트 카드가 보인다', (
     WidgetTester tester,
   ) async {
-    await _startChatInKeyboardMode(tester);
+    await _startConnect(tester);
 
     // 시간/내용/장소가 모두 없는 문장 -> 장소는 강제로 묻지 않고, 시간부터 하나씩 묻습니다.
     await _sendText(tester, '미팅 있어');
@@ -180,19 +154,20 @@ void main() {
 
     await _sendText(tester, '30분 전');
 
-    // 큰 확인 카드 대신, 입력창 바로 위 컴팩트한 실시간 정리 패널에 나타납니다.
+    // 큰 카드가 아니라, 입력창 바로 위 컴팩트한 실시간 정리 패널에 나타납니다.
     expect(find.text('동기화 준비'), findsOneWidget);
-    // "오후 5시"/"팀 회의"는 사용자의 답변 말풍선과 패널 값에 모두 나타납니다.
-    expect(find.text('오후 5시'), findsWidgets);
-    expect(find.text('팀 회의'), findsWidgets);
-    expect(find.text('30분 전'), findsWidgets);
-    expect(find.text('ASON Core에 동기화'), findsOneWidget);
+    expect(find.text('오후 5시'), findsOneWidget);
+    expect(find.text('팀 회의'), findsOneWidget);
+    expect(find.text('30분 전'), findsOneWidget);
+    expect(find.text('ASON에 동기화'), findsOneWidget);
+    // 반복이 없으면 "반복" 항목 자체를 표시하지 않습니다.
+    expect(find.text('반복'), findsNothing);
   });
 
-  testWidgets('일정 대화: 장소를 먼저 알아내고, 알림은 마지막에 단독으로 확인한 뒤 수정/동기화하면 초기화된다', (
+  testWidgets('일정 대화: 수정 후 동기화하면 짧게 안내하고 입력창과 카드를 초기화한다', (
     WidgetTester tester,
   ) async {
-    await _startChatInKeyboardMode(tester);
+    await _startConnect(tester);
 
     await _sendText(tester, '오늘 둔산동에서 일정 있어.');
     // 날짜/장소는 이미 알아냈으니 다시 묻지 않고, 시간부터 하나씩 묻습니다.
@@ -208,15 +183,11 @@ void main() {
     );
 
     await _sendText(tester, '30분 전');
-    // 큰 확인 카드 대신, 입력창 바로 위 컴팩트한 실시간 정리 패널에 나타납니다.
     expect(find.text('동기화 준비'), findsOneWidget);
     expect(find.text('오늘'), findsOneWidget);
     expect(find.text('오후 3시'), findsOneWidget);
-    // "김 과장과 미팅"/"30분 전"은 사용자의 답변 말풍선과 패널 값에 모두 나타납니다.
-    expect(find.text('김 과장과 미팅'), findsWidgets);
+    expect(find.text('김 과장과 미팅'), findsOneWidget);
     expect(find.text('대전 둔산동'), findsOneWidget);
-    expect(find.text('30분 전'), findsWidgets);
-    expect(find.text('ASON Core에 동기화'), findsOneWidget);
 
     // 수정: 내용을 지우지 않고 무엇을 바꿀지 되묻는다.
     await tester.tap(find.text('수정'));
@@ -224,118 +195,53 @@ void main() {
     expect(find.text('어떤 내용을 수정할까요?'), findsOneWidget);
 
     await _sendText(tester, '시간을 오후 4시로 바꿔줘.');
-    expect(find.text('시간을 오후 4시로 변경했습니다.'), findsOneWidget);
     expect(find.text('오후 4시'), findsOneWidget);
 
-    // 동기화: 로딩 표시(약 1초) -> 완료 문구 -> 새 내용 입력 버튼.
-    await tester.tap(find.text('ASON Core에 동기화'));
+    // 동기화: 로딩 표시(약 1초) -> 짧은 완료 안내 -> 입력창/카드 초기화.
+    await tester.tap(find.text('ASON에 동기화'));
     await tester.pump();
-    expect(find.text('ASON Core에 동기화하는 중입니다...'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 1100));
     await _settle(tester);
-    expect(find.text('ASON Core에 동기화할 준비가 완료되었습니다.'), findsOneWidget);
-    expect(find.text('새 내용 입력'), findsOneWidget);
 
-    await tester.tap(find.text('새 내용 입력'));
-    await _settle(tester);
-
-    expect(
-      find.text(
-        '안녕하세요.\n일정, 메모, 건강에 관한 내용을 말씀해 주세요.\nASON 통합 시스템에 정리해서 공유해 드리겠습니다.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('ASON에 저장되었습니다.'), findsOneWidget);
+    expect(find.text('동기화 준비'), findsNothing);
     expect(find.text('오후 4시'), findsNothing);
+    expect(find.text('말하거나 입력해 주세요.\nASON이 내용을 정리합니다.'), findsOneWidget);
   });
 
-  testWidgets('일정 대화: 수정 버튼을 눌러도 확인 카드가 사라지지 않고, 자연어로 항목을 하나씩 고칠 수 있다', (
+  testWidgets('입력창 아이콘으로 음성/키보드를 즉시 전환할 수 있고, 박스 크기는 그대로다', (
     WidgetTester tester,
   ) async {
-    await _startChatInKeyboardMode(tester);
+    await _startConnect(tester);
 
-    await _sendText(tester, '내일 오후 3시에 둔산동에서 김 과장과 미팅');
-    // 시간/내용/장소가 모두 채워졌으니, 알림만 단독으로 확인합니다.
-    expect(
-      find.text('일정을 확인했습니다.\n알림을 설정하시겠습니까?\n예: 30분 전 알림'),
-      findsOneWidget,
-    );
-
-    await _sendText(tester, '없음');
-    // 큰 확인 카드 대신, 입력창 바로 위 컴팩트한 실시간 정리 패널에 나타납니다.
-    expect(find.text('동기화 준비'), findsOneWidget);
-    expect(find.text('내일'), findsOneWidget);
-    expect(find.text('오후 3시'), findsOneWidget);
-    expect(find.text('김 과장과 미팅'), findsOneWidget);
-    expect(find.text('대전 둔산동'), findsOneWidget);
-
-    // 수정 버튼을 눌러도 패널은 사라지지 않고, "수정" 버튼만 잠시 숨겨집니다.
-    await tester.tap(find.text('수정'));
-    await _settle(tester);
-    expect(find.text('수정 가능'), findsOneWidget);
-    expect(find.text('김 과장과 미팅'), findsOneWidget);
-    expect(find.text('수정'), findsNothing);
-
-    // 자연어로 장소를 고칩니다: "장소는 유성구"
-    await _sendText(tester, '장소는 유성구');
-    expect(find.text('유성구'), findsWidgets);
-    expect(find.text('수정'), findsOneWidget);
-
-    // 내용을 고칩니다: "내용은 인테리어 미팅으로 변경"
-    await tester.tap(find.text('수정'));
-    await _settle(tester);
-    await _sendText(tester, '내용은 인테리어 미팅으로 변경');
-    expect(find.text('인테리어 미팅'), findsWidgets);
-
-    // 알림을 끕니다: "알림 없어" -> "없음"으로 정리됩니다.
-    await tester.tap(find.text('수정'));
-    await _settle(tester);
-    await _sendText(tester, '알림 없어');
-    expect(find.text('없음'), findsWidgets);
-
-    // 메모를 채웁니다: "메모에 계약서 준비"
-    await tester.tap(find.text('수정'));
-    await _settle(tester);
-    await _sendText(tester, '메모에 계약서 준비');
-    expect(find.text('계약서 준비'), findsWidgets);
-
-    // 반복을 설정합니다: "반복은 매주 월요일"
-    await tester.tap(find.text('수정'));
-    await _settle(tester);
-    await _sendText(tester, '반복은 매주 월요일');
-    expect(find.text('매주 월요일'), findsWidgets);
-  });
-
-  testWidgets('입력 방식은 작은 버튼으로 음성/키보드 사이를 즉시 전환할 수 있다', (
-    WidgetTester tester,
-  ) async {
-    await _startChatInKeyboardMode(tester);
     expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('음성으로 변경'), findsOneWidget);
+    expect(find.byTooltip('음성으로 전환'), findsOneWidget);
 
-    await tester.tap(find.text('음성으로 변경'));
+    await tester.tap(find.byTooltip('음성으로 전환'));
     await _settle(tester);
     expect(find.byType(TextField), findsNothing);
-    expect(find.text('키보드로 변경'), findsOneWidget);
+    expect(find.byTooltip('키보드로 전환'), findsOneWidget);
 
-    await tester.tap(find.text('키보드로 변경'));
+    await tester.tap(find.byTooltip('키보드로 전환'));
     await _settle(tester);
     expect(find.byType(TextField), findsOneWidget);
   });
 
-  testWidgets('건강 대화: 혈압 수치를 바로 인식해서 정리한다', (WidgetTester tester) async {
-    await _startChatInKeyboardMode(tester);
+  testWidgets('건강 대화: 혈압 수치를 바로 인식해서 컴팩트 카드로 정리한다', (
+    WidgetTester tester,
+  ) async {
+    await _startConnect(tester);
 
     await _sendText(tester, '오늘 혈압이 128에 82야.');
 
-    // 큰 확인 카드 대신, 입력창 바로 위 컴팩트한 실시간 정리 패널에 나타납니다.
     expect(find.text('동기화 준비'), findsOneWidget);
     expect(find.text('혈압'), findsOneWidget);
     expect(find.text('128 / 82 mmHg'), findsOneWidget);
   });
 
   testWidgets('메모 대화: 구매 표현을 자연스러운 문장으로 정리한다', (WidgetTester tester) async {
-    await _startChatInKeyboardMode(tester);
+    await _startConnect(tester);
 
     await _sendText(tester, '우유하고 계란 사야 해');
 
@@ -343,8 +249,10 @@ void main() {
     expect(find.text('우유와 계란 구매'), findsOneWidget);
   });
 
-  testWidgets('ASON과 관계없는 일반 대화는 자연스럽게 기록을 제안한다', (WidgetTester tester) async {
-    await _startChatInKeyboardMode(tester);
+  testWidgets('ASON과 관계없는 일반 대화는 종류를 먼저 묻고, 동기화 버튼을 보여주지 않는다', (
+    WidgetTester tester,
+  ) async {
+    await _startConnect(tester);
 
     await _sendText(tester, '오늘 기분이 별로야');
 
@@ -352,6 +260,6 @@ void main() {
       find.text('오늘 컨디션이 좋지 않으셨군요.\n이 내용을 건강 기록이나 메모로 정리할까요?'),
       findsOneWidget,
     );
-    expect(find.text('ASON Core에 동기화'), findsNothing);
+    expect(find.text('ASON에 동기화'), findsNothing);
   });
 }

@@ -1,20 +1,19 @@
 // 입력창 바로 위에 표시하는 컴팩트한 실시간 정리 패널입니다.
-// 채팅 전체를 가리는 큰 확인 카드 대신, 이 패널 하나로 분석 중/정보 부족/
-// 수정 가능/동기화 준비/동기화 완료/동기화 실패 상태를 모두 보여줍니다.
-// 아무 내용도 없으면 아예 그리지 않아(SizedBox.shrink) 채팅을 가리지 않고,
-// 내용이 생기면 작은 카드 하나만큼만 자리를 차지합니다.
+// ASON Connect의 유일한 결과 화면입니다. 채팅 이력 없이, 이 패널 하나로
+// 분석 중/정보 부족(되묻는 질문 포함)/수정 가능/동기화 준비/동기화 중/
+// 동기화 완료/동기화 실패 상태를 모두 보여줍니다. 아무 내용도 없으면 아예
+// 그리지 않고(SizedBox.shrink), 내용이 생기면 필요한 필드만 최소한으로
+// 보여줍니다.
 
 import 'package:flutter/material.dart';
 
 import '../../../core/design_system/design_system.dart';
 import '../models/draft_command.dart';
-import '../services/summary_builder.dart';
 
 enum SchedulePanelState {
   analyzing, // 분석 중 (실시간 미리보기 계산 중)
-  missingInfo, // 정보 부족
-  editable, // 수정 가능(아직 동기화 전)
-  readyToSync, // 동기화 준비 완료
+  missingInfo, // 정보 부족 (되묻는 중)
+  readyToSync, // 수정 가능 / 동기화 준비
   syncing, // 동기화 중
   synced, // 동기화 완료
   failed, // 동기화 실패
@@ -27,8 +26,6 @@ extension on SchedulePanelState {
         return '분석 중';
       case SchedulePanelState.missingInfo:
         return '정보 부족';
-      case SchedulePanelState.editable:
-        return '수정 가능';
       case SchedulePanelState.readyToSync:
         return '동기화 준비';
       case SchedulePanelState.syncing:
@@ -59,8 +56,6 @@ extension on SchedulePanelState {
         return Icons.auto_awesome_rounded;
       case SchedulePanelState.missingInfo:
         return Icons.help_outline_rounded;
-      case SchedulePanelState.editable:
-        return Icons.edit_note_rounded;
       case SchedulePanelState.readyToSync:
         return Icons.cloud_upload_outlined;
       case SchedulePanelState.syncing:
@@ -78,6 +73,7 @@ class SchedulePreviewPanel extends StatelessWidget {
     super.key,
     required this.draft,
     required this.isPreviewOnly,
+    required this.pendingQuestion,
     required this.syncError,
     this.onEdit,
     this.onSync,
@@ -89,6 +85,9 @@ class SchedulePreviewPanel extends StatelessWidget {
   /// true면 아직 전송하지 않은, 입력 중인 문장의 미리보기입니다.
   /// (수정/동기화 버튼을 제공하지 않습니다 — 먼저 전송해야 합니다)
   final bool isPreviewOnly;
+
+  /// 정보가 부족해 ASON이 되묻는 중일 때 보여줄 질문입니다.
+  final String? pendingQuestion;
 
   final String? syncError;
   final VoidCallback? onEdit;
@@ -107,29 +106,38 @@ class SchedulePreviewPanel extends StatelessWidget {
         draft.status == DraftCommandStatus.clarifyingCategory) {
       return SchedulePanelState.missingInfo;
     }
-    if (draft.status == DraftCommandStatus.ready) {
-      return SchedulePanelState.readyToSync;
-    }
-    // 남은 경우는 status == editing(수정할 내용을 자연어로 되묻는 중)입니다.
-    // 답변할 때까지는 수정/동기화 버튼을 다시 보여주지 않습니다.
-    return SchedulePanelState.editable;
+    // ready 또는 editing(자연어 수정 답변을 기다리는 중) 모두 카드 자체는
+    // 계속 보여주되, editing 동안에는 버튼만 잠시 숨깁니다.
+    return SchedulePanelState.readyToSync;
   }
 
+  /// 일정은 핵심 필드(날짜/시간/내용/장소/알림)만 항상 보여주고, 반복/메모는
+  /// 값이 있을 때만 보여줍니다. 그 외 카테고리는 한 줄 요약만 보여줍니다.
   List<MapEntry<String, String>> _rows(DraftCommand draft) {
     if (draft.category == DraftCommandCategory.schedule ||
         draft.category == DraftCommandCategory.todo) {
-      return [
+      final rows = [
         MapEntry('날짜', draft.date ?? '-'),
         MapEntry('시간', draft.time ?? '-'),
         MapEntry('내용', draft.title ?? '-'),
         MapEntry('장소', draft.location ?? '-'),
         MapEntry('알림', draft.alarm ?? '없음'),
-        MapEntry('반복', draft.repeatOption ?? '없음'),
-        MapEntry('메모', draft.memo ?? '-'),
       ];
+      final repeat = draft.repeatOption;
+      if (repeat != null && repeat.trim().isNotEmpty && repeat != '없음') {
+        rows.add(MapEntry('반복', repeat));
+      }
+      final memo = draft.memo;
+      if (memo != null && memo.trim().isNotEmpty) {
+        rows.add(MapEntry('메모', memo));
+      }
+      return rows;
     }
-    if (draft.category == null) return const [];
-    return const SummaryBuilder().rows(draft);
+    if (draft.category == DraftCommandCategory.health) {
+      return [MapEntry(draft.healthItem ?? '건강', draft.title ?? '-')];
+    }
+    // 메모/프로젝트 등은 한 줄 내용만 보여줍니다.
+    return [MapEntry('내용', draft.title ?? '-')];
   }
 
   @override
@@ -138,12 +146,15 @@ class SchedulePreviewPanel extends StatelessWidget {
     if (draft == null) return const SizedBox.shrink();
 
     final state = _stateFor(draft);
-    // "editable" 상태는 실제로는 status == editing(자연어 수정 답변을 기다리는
-    // 중)이므로, 버튼을 다시 보여주지 않습니다. 기존 "수정" 대화 흐름과 동일합니다.
+    final isEditing = draft.status == DraftCommandStatus.editing;
     final canEditOrSync =
         !isPreviewOnly &&
+        !isEditing &&
         (state == SchedulePanelState.readyToSync ||
+            state == SchedulePanelState.syncing ||
             state == SchedulePanelState.failed);
+    final textColor = AsonColors.onBackground(context);
+    final mutedColor = AsonColors.onBackgroundMuted(context);
 
     return GlowCard(
       key: const ValueKey('schedule-preview-panel'),
@@ -169,19 +180,23 @@ class SchedulePreviewPanel extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 state.label,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  color: Colors.white.withValues(alpha: 0.55),
-                ),
+                style: TextStyle(fontSize: 11.5, color: mutedColor),
               ),
             ],
           ),
-          if (draft.category != null) ...[
+          if (pendingQuestion != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              pendingQuestion!,
+              style: TextStyle(fontSize: 13, color: textColor, height: 1.35),
+            ),
+          ] else if (draft.category != null) ...[
             const SizedBox(height: 8),
             for (final row in _rows(draft))
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(
                       width: 40,
@@ -196,10 +211,7 @@ class SchedulePreviewPanel extends StatelessWidget {
                     Expanded(
                       child: Text(
                         row.value,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: Colors.white,
-                        ),
+                        style: TextStyle(fontSize: 12.5, color: textColor),
                       ),
                     ),
                   ],
@@ -219,10 +231,7 @@ class SchedulePreviewPanel extends StatelessWidget {
               padding: const EdgeInsets.only(top: 6),
               child: Text(
                 'Enter를 누르거나 전송하면 확정됩니다.',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.white.withValues(alpha: 0.4),
-                ),
+                style: TextStyle(fontSize: 11, color: mutedColor),
               ),
             ),
           if (canEditOrSync) ...[
@@ -233,13 +242,15 @@ class SchedulePreviewPanel extends StatelessWidget {
                   child: GlowButton(
                     label: '수정',
                     variant: GlowButtonVariant.dark,
-                    onPressed: onEdit,
+                    onPressed: state == SchedulePanelState.syncing
+                        ? null
+                        : onEdit,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: GlowButton(
-                    label: 'ASON Core에 동기화',
+                    label: 'ASON에 동기화',
                     isLoading: state == SchedulePanelState.syncing,
                     onPressed: onSync,
                   ),

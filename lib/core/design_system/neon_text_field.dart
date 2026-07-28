@@ -67,10 +67,13 @@ class _NeonTextFieldState extends State<NeonTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
     final borderColor = hasError
         ? AsonColors.error
         : AsonColors.primary.withValues(alpha: _isFocused ? 0.9 : 0.35);
+    final textColor = AsonColors.onBackground(context);
+    final mutedColor = AsonColors.onBackgroundMuted(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,7 +83,7 @@ class _NeonTextFieldState extends State<NeonTextField> {
             widget.label!,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.6),
+              color: mutedColor,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -88,7 +91,9 @@ class _NeonTextFieldState extends State<NeonTextField> {
         ],
         Container(
           decoration: BoxDecoration(
-            color: AsonColors.surfaceNavy.withValues(alpha: 0.55),
+            color: isLight
+                ? AsonColors.lightSurface
+                : AsonColors.surfaceNavy.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: borderColor, width: 1.2),
             boxShadow: _isFocused
@@ -104,7 +109,7 @@ class _NeonTextFieldState extends State<NeonTextField> {
             onChanged: widget.onChanged,
             onSubmitted: widget.onSubmitted,
             autofocus: widget.autofocus,
-            style: const TextStyle(fontSize: 15, color: Colors.white),
+            style: TextStyle(fontSize: 15, color: textColor),
             decoration: InputDecoration(
               border: InputBorder.none,
               isDense: true,
@@ -113,10 +118,7 @@ class _NeonTextFieldState extends State<NeonTextField> {
                 vertical: 14,
               ),
               hintText: widget.hintText,
-              hintStyle: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withValues(alpha: 0.35),
-              ),
+              hintStyle: TextStyle(fontSize: 14, color: mutedColor),
               suffixIcon: widget.showObscureToggle
                   ? IconButton(
                       icon: Icon(
@@ -124,7 +126,7 @@ class _NeonTextFieldState extends State<NeonTextField> {
                             ? Icons.visibility_off_rounded
                             : Icons.visibility_rounded,
                         size: 20,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: mutedColor,
                       ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     )

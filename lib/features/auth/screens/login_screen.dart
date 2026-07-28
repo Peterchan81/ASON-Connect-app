@@ -85,13 +85,12 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _infoMessage = '$feature은(는) 준비 중인 기능입니다.');
   }
 
-  void _openSignup() async {
-    final registered = await Navigator.of(context).push<bool>(
+  // 회원가입이 끝나면 SignupScreen이 로그인 화면으로 돌아오지 않고, 자동
+  // 로그인 후 곧바로 Connect 입력 화면으로 이동합니다(전체 스택 교체).
+  void _openSignup() {
+    Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const SignupScreen()),
     );
-    if (registered == true && mounted) {
-      setState(() => _infoMessage = '회원가입이 완료되었습니다. 로그인해주세요.');
-    }
   }
 
   @override

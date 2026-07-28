@@ -107,17 +107,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _handleLogoutPressed() async {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AsonColors.surfaceNavy,
+        backgroundColor: isLight
+            ? AsonColors.lightSurface
+            : AsonColors.surfaceNavy,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text('로그아웃', style: TextStyle(color: Colors.white)),
+        title: Text(
+          '로그아웃',
+          style: TextStyle(color: AsonColors.onBackground(context)),
+        ),
         content: Text(
           '로그아웃 하시겠습니까?',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+          style: TextStyle(color: AsonColors.onBackgroundMuted(context)),
         ),
         actions: [
           TextButton(
@@ -194,7 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               _SettingsSection(
-                title: '테마',
+                title: '화면 변경',
                 child: Column(
                   children: [
                     for (final mode in AppThemeMode.values)
@@ -215,7 +221,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     'Version $kAppVersion',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: AsonColors.onBackgroundMuted(context),
                     ),
                   ),
                 ),
@@ -294,10 +300,13 @@ class _SelectableTile extends StatelessWidget {
                 size: 20,
                 color: selected
                     ? AsonColors.primary
-                    : Colors.white.withValues(alpha: 0.4),
+                    : AsonColors.onBackgroundMuted(context),
               ),
               const SizedBox(width: 12),
-              Text(label, style: const TextStyle(color: Colors.white)),
+              Text(
+                label,
+                style: TextStyle(color: AsonColors.onBackground(context)),
+              ),
             ],
           ),
         ),
@@ -380,7 +389,7 @@ class _AccountInfoBody extends StatelessWidget {
               onPressed: onDisableAutoLogin,
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
-                foregroundColor: Colors.white.withValues(alpha: 0.6),
+                foregroundColor: AsonColors.onBackgroundMuted(context),
               ),
               child: const Text('자동 로그인 해제', style: TextStyle(fontSize: 12.5)),
             ),
@@ -400,6 +409,7 @@ class _ReadOnlyField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -407,7 +417,7 @@ class _ReadOnlyField extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.6),
+            color: AsonColors.onBackgroundMuted(context),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -416,15 +426,21 @@ class _ReadOnlyField extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: AsonColors.surfaceNavy.withValues(alpha: 0.4),
+            color: isLight
+                ? AsonColors.lightBackground
+                : AsonColors.surfaceNavy.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(
+              color: isLight
+                  ? Colors.black.withValues(alpha: 0.08)
+                  : Colors.white.withValues(alpha: 0.08),
+            ),
           ),
           child: Text(
             value,
             style: TextStyle(
               fontSize: 15,
-              color: Colors.white.withValues(alpha: 0.6),
+              color: AsonColors.onBackgroundMuted(context),
             ),
           ),
         ),

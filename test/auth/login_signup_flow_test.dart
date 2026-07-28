@@ -122,7 +122,7 @@ void main() {
     expect(find.text('필수 약관에 동의해주세요.'), findsOneWidget);
   });
 
-  testWidgets('로그인 화면에서 회원가입을 마치면 로그인 화면으로 돌아와 완료 안내가 보인다', (
+  testWidgets('회원가입을 마치면 로그인 화면을 다시 거치지 않고 곧바로 Connect 입력 화면으로 이동한다', (
     tester,
   ) async {
     _usePhoneViewport(tester);
@@ -146,15 +146,14 @@ void main() {
     await _settle(tester);
 
     expect(find.byType(SignupScreen), findsNothing);
-    expect(find.byType(LoginScreen), findsOneWidget);
-    expect(find.text('회원가입이 완료되었습니다. 로그인해주세요.'), findsOneWidget);
-
-    // 새로 가입한 계정으로 실제 로그인도 가능해야 합니다.
-    await tester.enterText(find.byType(TextField).at(0), 'newuser');
-    await tester.enterText(find.byType(TextField).at(1), 'pw1234');
-    await tester.tap(find.text('ASON 시작하기'));
-    await _settle(tester);
+    expect(find.byType(LoginScreen), findsNothing);
     expect(find.byType(AsonConnectScreen), findsOneWidget);
+    expect(AuthService.instance.isSessionActive, isTrue);
+    expect(AuthService.instance.autoLoginEnabled, isTrue);
+
+    // 뒤로 가기로 회원가입/로그인 화면에 돌아갈 수 없습니다.
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
+    expect(navigator.canPop(), isFalse);
   });
 
   testWidgets('메인 화면에서 로그아웃하면 로그인 화면으로 이동하고, 뒤로 가기로 메인 화면에 돌아갈 수 없다', (

@@ -31,10 +31,15 @@ class GlowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        boxShadow: AsonGlow.of(glowColor, blur: 26, opacity: glowOpacity),
+        boxShadow: AsonGlow.of(
+          glowColor,
+          blur: 26,
+          opacity: isLight ? glowOpacity * 0.6 : glowOpacity,
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
@@ -43,10 +48,14 @@ class GlowCard extends StatelessWidget {
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              color: AsonColors.surfaceNavy.withValues(alpha: 0.55),
+              color: isLight
+                  ? AsonColors.lightSurface
+                  : AsonColors.surfaceNavy.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(radius),
               border: Border.all(
-                color: glowColor.withValues(alpha: borderOpacity),
+                color: isLight
+                    ? glowColor.withValues(alpha: borderOpacity * 0.7)
+                    : glowColor.withValues(alpha: borderOpacity),
                 width: 1.2,
               ),
             ),

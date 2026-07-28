@@ -29,18 +29,17 @@ class AsonColors {
   static const Color hudLine = Color(0xFF1E3A5F);
 
   // ---- 라이트 모드 ----
-  // Glow Card/HudPanel/NeonTextField 같은 "떠 있는 어두운 유리" 컴포넌트는
-  // 라이트 모드에서도 그대로(다크) 유지합니다. 여기 두 색은 화면 바탕과 상단바처럼
-  // 배경 자체가 뒤집혀야 하는 부분에만 사용합니다. ASON Core의 라이트 배색
-  // (크림 카드 0xFFFFF7E8, 텍스트 black87/54)과 같은 톤을 재사용합니다.
-  static const Color lightBackground = Color(0xFFFBF9F5);
-  static const Color lightSurface = Color(0xFFFFF7E8);
-  static const Color lightTextPrimary = Color(0xDD000000);
-  static const Color lightTextSecondary = Color(0x8A000000);
+  // 밝은 회색/아이보리 배경 위에 흰색 카드, 진한 회색 기본 글자·회색 보조
+  // 글자, 오렌지(primary) 포인트를 그대로 사용합니다. GlowCard/HudPanel/
+  // NeonTextField 등 모든 디자인 시스템 컴포넌트가 Theme.of(context).brightness를
+  // 보고 이 팔레트로 전환됩니다.
+  static const Color lightBackground = Color(0xFFF2F0EB);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightTextPrimary = Color(0xFF2D2D2D);
+  static const Color lightTextSecondary = Color(0xFF6B6B6B);
 
-  /// 화면 배경 위에 바로 놓이는(카드에 감싸이지 않은) 텍스트/아이콘 색입니다.
-  /// Glow Card 등 자체적으로 어두운 유리 표면을 가진 컴포넌트 내부에서는
-  /// 배경 밝기와 무관하게 항상 밝은 색(Colors.white)을 그대로 사용합니다.
+  /// 화면 배경(또는 카드) 위에 놓이는 기본 텍스트/아이콘 색입니다. 다크
+  /// 모드에서는 흰색, 라이트 모드에서는 진한 회색을 사용해 대비를 지킵니다.
   static Color onBackground(BuildContext context) {
     return Theme.of(context).brightness == Brightness.light
         ? lightTextPrimary
