@@ -35,8 +35,8 @@ class CharacterGlow extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: AsonGlow.of(
                 AsonColors.primary,
-                blur: size * 0.42,
-                opacity: 0.34,
+                blur: size * 0.48,
+                opacity: 0.4,
               ),
             ),
           ),
@@ -98,10 +98,10 @@ class _HudCirclePainter extends CustomPainter {
 
     // 굵고 은은하게 번지는 메인 링입니다. (Glow)
     final glowRingPaint = Paint()
-      ..color = AsonColors.primary.withValues(alpha: 0.6)
+      ..color = AsonColors.primary.withValues(alpha: 0.7)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = r * 0.06
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+      ..strokeWidth = r * 0.07
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
     canvas.drawCircle(center, r * 0.80, glowRingPaint);
 
     // 메인 링 위에 겹치는 또렷한 얇은 선입니다.
@@ -153,8 +153,8 @@ class _HudCirclePainter extends CustomPainter {
   /// 링의 좌우(9시/3시 방향)에서 강하게 번지는 플레어 광원입니다.
   void _paintSideFlares(Canvas canvas, Offset center, double r) {
     final flarePaint = Paint()
-      ..color = AsonColors.primary.withValues(alpha: 0.55)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.10);
+      ..color = AsonColors.primary.withValues(alpha: 0.7)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.12);
 
     for (final dx in [-r * 0.80, r * 0.80]) {
       canvas.save();

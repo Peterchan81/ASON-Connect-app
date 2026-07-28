@@ -3,6 +3,7 @@
 // 앱에는 이 화면과 AsonConnectScreen, 두 화면만 존재합니다.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -89,13 +90,21 @@ class _SplashScreenState extends State<SplashScreen> {
               builder: (context, constraints) {
                 final height = constraints.maxHeight;
                 final width = constraints.maxWidth;
-                // 844(일반적인 세로 스마트폰 높이) 기준 비율로 크기를 늘리고
+                // 844(일반적인 세로 스마트폰 높이) 기준 비율로 간격을 늘리고
                 // 줄입니다. 화면이 아주 작거나 커도 요소가 과하게 작아지거나
                 // 커지지 않도록 범위를 제한합니다.
                 final scale = (height / 844).clamp(0.72, 1.08);
-                final characterRingSize = (height * 0.32).clamp(172.0, 300.0);
+                // 로고/캐릭터/카운트다운은 목표 이미지처럼 "화면 너비 대비
+                // 비율"이 기준이므로, 실제로 보이는 콘텐츠 폭(최대 420)을
+                // 기준으로 크기를 계산합니다.
+                final contentWidth = math.min(width, 420.0);
+                final asonFontSize = (contentWidth * 0.19).clamp(52.0, 90.0);
+                final characterRingSize = (contentWidth * 0.80).clamp(
+                  260.0,
+                  380.0,
+                );
                 final characterImageSize = characterRingSize * 0.6;
-                final countdownSize = (height * 0.16).clamp(88.0, 132.0);
+                final countdownSize = (contentWidth * 0.42).clamp(140.0, 220.0);
 
                 // 작은 화면(작은 스마트폰, 세로로 좁은 Chrome 창)에서도 내용이
                 // 잘리지 않도록, 화면보다 내용이 커지면 스크롤로 전환합니다.
@@ -108,16 +117,14 @@ class _SplashScreenState extends State<SplashScreen> {
                           constraints: const BoxConstraints(maxWidth: 420),
                           child: Padding(
                             padding: EdgeInsets.symmetric(
-                              horizontal: width <= 360 ? 22.0 : 30.0,
+                              horizontal: width <= 360 ? 16.0 : 22.0,
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SizedBox(height: 8 * scale),
-                                AsonLogoHeader(
-                                  asonFontSize: (34 * scale).clamp(28.0, 40.0),
-                                ),
-                                SizedBox(height: 20 * scale),
+                                SizedBox(height: 6 * scale),
+                                AsonLogoHeader(asonFontSize: asonFontSize),
+                                SizedBox(height: 26 * scale),
                                 CharacterGlow(
                                   size: characterRingSize,
                                   child: Image.asset(
@@ -126,23 +133,23 @@ class _SplashScreenState extends State<SplashScreen> {
                                     fit: BoxFit.contain,
                                   ),
                                 ),
-                                SizedBox(height: 16 * scale),
+                                SizedBox(height: 22 * scale),
                                 _SplashDescription(scale: scale),
-                                SizedBox(height: 18 * scale),
+                                SizedBox(height: 24 * scale),
                                 CountdownHud(
                                   secondsLeft: _secondsLeft,
                                   totalSeconds: _totalSeconds,
                                   size: countdownSize,
                                 ),
-                                SizedBox(height: 10 * scale),
+                                SizedBox(height: 14 * scale),
                                 Text(
                                   '잠시 후 시작됩니다.',
                                   style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.white.withValues(alpha: 0.55),
+                                    fontSize: (15 * scale).clamp(14.0, 17.0),
+                                    color: Colors.white.withValues(alpha: 0.6),
                                   ),
                                 ),
-                                SizedBox(height: 20 * scale),
+                                SizedBox(height: 18 * scale),
                               ],
                             ),
                           ),
@@ -159,7 +166,7 @@ class _SplashScreenState extends State<SplashScreen> {
             left: 0,
             right: 0,
             bottom: 0,
-            height: 130,
+            height: 220,
             child: IgnorePointer(child: SplashBottomGlow()),
           ),
         ],
@@ -176,25 +183,31 @@ class _SplashDescription extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fontSize = (17 * scale).clamp(15.0, 19.0);
+    final fontSize = (24 * scale).clamp(21.0, 27.0);
     return Text.rich(
       TextSpan(
         style: TextStyle(
           fontSize: fontSize,
           height: 1.5,
-          fontWeight: FontWeight.w400,
-          color: Colors.white.withValues(alpha: 0.88),
+          fontWeight: FontWeight.w500,
+          color: Colors.white.withValues(alpha: 0.92),
         ),
         children: [
           const TextSpan(text: '말하거나 입력하면\n'),
           TextSpan(
             text: 'ASON',
-            style: TextStyle(color: AsonColors.primary, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: AsonColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const TextSpan(text: '이 내용을 정리하여\n통합 시스템에 '),
           TextSpan(
             text: '공유',
-            style: TextStyle(color: AsonColors.primary, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: AsonColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const TextSpan(text: '합니다.'),
         ],

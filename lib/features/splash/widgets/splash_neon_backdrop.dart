@@ -167,12 +167,35 @@ class SplashBottomGlow extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: RadialGradient(
-                center: const Alignment(0, 1.5),
-                radius: 1.4,
+                center: const Alignment(0, 1.3),
+                radius: 1.5,
                 colors: [
-                  AsonColors.primary.withValues(alpha: 0.30),
+                  AsonColors.primary.withValues(alpha: 0.42),
                   Colors.transparent,
                 ],
+              ),
+            ),
+          ),
+        ),
+        // 화면 아래 중앙에서 위로 곧게 솟아오르는 수직 광선입니다.
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            width: 3,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [
+                  AsonColors.primary.withValues(alpha: 0.55),
+                  Colors.transparent,
+                ],
+              ),
+              boxShadow: AsonGlow.of(
+                AsonColors.primary,
+                blur: 24,
+                opacity: 0.5,
               ),
             ),
           ),

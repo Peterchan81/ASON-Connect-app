@@ -102,7 +102,7 @@ class _CountdownRingPainter extends CustomPainter {
     final trackPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.08)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.035
+      ..strokeWidth = size.width * 0.042
       ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, r * 0.86, trackPaint);
 
@@ -112,9 +112,9 @@ class _CountdownRingPainter extends CustomPainter {
       final glowPaint = Paint()
         ..color = AsonColors.primary.withValues(alpha: 0.7)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = size.width * 0.07
+        ..strokeWidth = size.width * 0.09
         ..strokeCap = StrokeCap.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: r * 0.86),
         _startAngle,
@@ -137,7 +137,7 @@ class _CountdownRingPainter extends CustomPainter {
           transform: GradientRotation(_startAngle),
         ).createShader(Rect.fromCircle(center: center, radius: r * 0.86))
         ..style = PaintingStyle.stroke
-        ..strokeWidth = size.width * 0.035
+        ..strokeWidth = size.width * 0.042
         ..strokeCap = StrokeCap.round;
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: r * 0.86),
@@ -204,11 +204,11 @@ class _NeonCountdownNumber extends StatelessWidget {
             style: baseStyle.copyWith(
               foreground: Paint()
                 ..style = PaintingStyle.stroke
-                ..strokeWidth = strokeWidth * 3
-                ..color = AsonColors.primary.withValues(alpha: 0.8)
+                ..strokeWidth = strokeWidth * 3.4
+                ..color = AsonColors.primary.withValues(alpha: 0.9)
                 ..maskFilter = MaskFilter.blur(
                   BlurStyle.normal,
-                  fontSize * 0.18,
+                  fontSize * 0.22,
                 ),
             ),
           ),
