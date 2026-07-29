@@ -12,11 +12,8 @@ void main() {
 
   DraftCommand readyScheduleDraft() {
     final started = engine.process(BrainInput(text: '내일 오후 3시에 김 과장과 미팅'));
-    final afterAlarm = engine.process(
-      BrainInput(text: '없음', draft: started.draft),
-    );
-    expect(afterAlarm.draft?.status, DraftCommandStatus.ready);
-    return afterAlarm.draft!;
+    expect(started.draft?.status, DraftCommandStatus.ready);
+    return started.draft!;
   }
 
   test('시간 수정: "시간을 오후 4시로 바꿔줘"는 time만 바꾸고 다시 ready가 된다', () {

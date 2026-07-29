@@ -10,13 +10,14 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final engine = BrainEngine();
 
-  test('후속 답변 턴에도 activeIntent(현재 카테고리)가 유지된다', () {
+  test('수정 답변 턴에도 activeIntent(현재 카테고리)가 유지된다', () {
     final started = engine.process(BrainInput(text: '내일 오후 3시에 팀 회의'));
-    expect(started.draft?.status, DraftCommandStatus.collecting);
+    expect(started.draft?.status, DraftCommandStatus.ready);
     expect(started.activeIntent, DraftCommandCategory.schedule);
 
+    final editing = started.draft!.copyWith(status: DraftCommandStatus.editing);
     final continued = engine.process(
-      BrainInput(text: '30분 전', draft: started.draft),
+      BrainInput(text: '알림은 30분 전', draft: editing),
     );
 
     // 이번 턴은 새로 분류하지 않았으므로 신선한 intent 분석 결과는 없지만,
@@ -27,8 +28,7 @@ void main() {
 
   test('수정 턴에서는 실제로 바뀐 필드만 changedFields로 돌아온다', () {
     final started = engine.process(BrainInput(text: '내일 오후 3시에 김 과장과 미팅'));
-    final ready = engine.process(BrainInput(text: '없음', draft: started.draft));
-    final editing = ready.draft!.copyWith(status: DraftCommandStatus.editing);
+    final editing = started.draft!.copyWith(status: DraftCommandStatus.editing);
 
     final corrected = engine.process(
       BrainInput(text: '시간을 오후 4시로 바꿔줘', draft: editing),
@@ -39,9 +39,10 @@ void main() {
 
   test('누적 Entity는 이번 턴에 새로 추출하지 않은 필드도 포함한다', () {
     final started = engine.process(BrainInput(text: '내일 오후 3시에 팀 회의'));
+    final editing = started.draft!.copyWith(status: DraftCommandStatus.editing);
 
     final continued = engine.process(
-      BrainInput(text: '30분 전', draft: started.draft),
+      BrainInput(text: '알림은 30분 전', draft: editing),
     );
 
     // 이번 턴에 새로 추출한 Entity는 없다.
@@ -54,9 +55,10 @@ void main() {
 
   test('분석이 없었던 턴은 entities를 거짓으로 만들어 내지 않는다', () {
     final started = engine.process(BrainInput(text: '내일 오후 3시에 팀 회의'));
+    final editing = started.draft!.copyWith(status: DraftCommandStatus.editing);
 
     final continued = engine.process(
-      BrainInput(text: '30분 전', draft: started.draft),
+      BrainInput(text: '알림은 30분 전', draft: editing),
     );
 
     expect(continued.entities, isNull);

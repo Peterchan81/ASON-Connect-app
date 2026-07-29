@@ -40,6 +40,11 @@ Future<void> _startConnect(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(seconds: 3));
   await _settle(tester);
+
+  // 첫 화면은 큰 선택 버튼 두 개만 보여줍니다. "문자로 입력하기"를 골라야
+  // 입력창이 나타납니다.
+  await tester.tap(find.text('문자로 입력하기'));
+  await _settle(tester);
 }
 
 void main() {
@@ -68,10 +73,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.send_rounded));
     await _settle(tester);
 
-    await tester.enterText(find.byType(TextField), '없음');
-    await tester.tap(find.byIcon(Icons.send_rounded));
-    await _settle(tester);
-
+    // 되묻지 않고 곧바로 정리 패널로 바뀝니다.
     expect(find.text('동기화 준비'), findsOneWidget);
     expect(find.text('ASON에 동기화'), findsOneWidget);
   });

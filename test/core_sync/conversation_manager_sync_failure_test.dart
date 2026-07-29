@@ -14,7 +14,6 @@ void main() {
   test('완전히 동일한 일정이 이미 있으면 동기화가 실패로 처리되고 이유가 남는다', () async {
     final first = ConversationManager();
     first.handleUserText('내일 오후 3시 영동에서 광고미팅');
-    first.handleUserText('없음');
     expect(first.currentDraft?.status, DraftCommandStatus.ready);
     first.beginSync();
     await first.finishSync();
@@ -24,7 +23,6 @@ void main() {
     // 같은 날짜/시간/제목으로 완전히 새로운(다른 id) 일정을 또 만듭니다.
     final second = ConversationManager();
     second.handleUserText('내일 오후 3시 영동에서 광고미팅');
-    second.handleUserText('없음');
     expect(second.currentDraft?.status, DraftCommandStatus.ready);
 
     second.beginSync();
@@ -55,7 +53,6 @@ void main() {
   test('updateDraftField는 자연어 재해석 없이 값만 바로 덮어쓴다', () {
     final manager = ConversationManager();
     manager.handleUserText('내일 오후 3시 영동에서 광고미팅');
-    manager.handleUserText('없음');
     expect(manager.currentDraft?.status, DraftCommandStatus.ready);
 
     manager.updateDraftField(location: '유성구');

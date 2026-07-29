@@ -11,6 +11,8 @@ enum DraftCommandCategory {
   health, // 건강
   project, // 프로젝트
   todo, // 할 일
+  dailyGoal, // 나의 하루 목표
+  diary, // 다이어리
 }
 
 /// 화면에 표시할 한글 분류 이름을 반환하는 확장 기능입니다.
@@ -27,6 +29,10 @@ extension DraftCommandCategoryLabel on DraftCommandCategory {
         return '프로젝트';
       case DraftCommandCategory.todo:
         return '할 일';
+      case DraftCommandCategory.dailyGoal:
+        return '나의 하루 목표';
+      case DraftCommandCategory.diary:
+        return '다이어리';
     }
   }
 
@@ -43,6 +49,10 @@ extension DraftCommandCategoryLabel on DraftCommandCategory {
         return '프로젝트를 저장했습니다.';
       case DraftCommandCategory.todo:
         return '할 일을 저장했습니다.';
+      case DraftCommandCategory.dailyGoal:
+        return '목표를 저장했습니다.';
+      case DraftCommandCategory.diary:
+        return '다이어리에 기록했습니다.';
     }
   }
 }

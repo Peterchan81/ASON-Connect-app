@@ -73,17 +73,14 @@ void main() {
     });
   });
 
-  group('부족한 필드 계산과 질문 생성', () {
-    test('알림만 남으면 알림 하나만 되묻는다', () {
+  group('입력 폼처럼 되묻지 않고 곧바로 결과 카드를 보여준다', () {
+    test('알림처럼 부족한 값이 있어도 되묻지 않고 곧바로 ready 상태의 결과 카드가 된다', () {
       final result = BrainEngine().process(BrainInput(text: '내일 오후 3시에 팀 회의'));
 
-      expect(result.draft?.status, DraftCommandStatus.collecting);
-      expect(result.missingFields, ['alarm']);
-      expect(result.messages.single.type, ChatMessageType.question);
-      expect(
-        result.messages.single.text,
-        '일정을 확인했습니다.\n알림을 설정하시겠습니까?\n예: 30분 전 알림',
-      );
+      expect(result.draft?.status, DraftCommandStatus.ready);
+      expect(result.missingFields, isEmpty);
+      expect(result.messages.single.type, ChatMessageType.summary);
+      expect(result.messages.single.text, '일정을 저장했습니다.');
     });
   });
 
@@ -101,11 +98,11 @@ void main() {
       expect(result.syncReady, isTrue);
     });
 
-    test('일정 수집이 끝나지 않으면 Summary/Sync 모두 준비되지 않는다', () {
+    test('일정도 새로 입력하면 곧바로 Summary/Sync가 준비된다', () {
       final result = BrainEngine().process(BrainInput(text: '내일 오후 3시에 팀 회의'));
 
-      expect(result.summaryReady, isFalse);
-      expect(result.syncReady, isFalse);
+      expect(result.summaryReady, isTrue);
+      expect(result.syncReady, isTrue);
     });
   });
 
@@ -116,12 +113,9 @@ void main() {
       final started = engine.process(
         BrainInput(text: '내일 오후 3시에 둔산동에서 김 과장과 미팅'),
       );
-      final afterAlarm = engine.process(
-        BrainInput(text: '없음', draft: started.draft),
-      );
-      expect(afterAlarm.draft?.status, DraftCommandStatus.ready);
+      expect(started.draft?.status, DraftCommandStatus.ready);
 
-      final editingDraft = afterAlarm.draft!.copyWith(
+      final editingDraft = started.draft!.copyWith(
         status: DraftCommandStatus.editing,
       );
       final corrected = engine.process(

@@ -14,6 +14,8 @@ class EntityResult {
     this.memoType,
     this.projectAction,
     this.progress,
+    this.alarm,
+    this.repeatOption,
   });
 
   static const empty = EntityResult();
@@ -23,6 +25,12 @@ class EntityResult {
   final String? location;
   final String? title;
   final String? healthItem;
+
+  /// 일정 알림입니다. (일정 문장에 직접 포함된 경우에만 채워집니다) 예: "1시간 전"
+  final String? alarm;
+
+  /// 반복입니다. 일정의 반복 또는 나의 하루 목표의 반복 주기입니다. 예: "매일 아침", "없음"
+  final String? repeatOption;
 
   /// 장소가 확실하지 않을 때, ASON이 되물을 추정 지역명입니다.
   final String? pendingLocationGuess;
@@ -52,7 +60,9 @@ class EntityResult {
           other.pendingLocationOriginal == pendingLocationOriginal &&
           other.memoType == memoType &&
           other.projectAction == projectAction &&
-          other.progress == progress);
+          other.progress == progress &&
+          other.alarm == alarm &&
+          other.repeatOption == repeatOption);
 
   @override
   int get hashCode => Object.hash(
@@ -66,6 +76,8 @@ class EntityResult {
     memoType,
     projectAction,
     progress,
+    alarm,
+    repeatOption,
   );
 
   @override
@@ -73,5 +85,6 @@ class EntityResult {
       'EntityResult(date: $date, time: $time, location: $location, '
       'title: $title, healthItem: $healthItem, '
       'pendingLocationGuess: $pendingLocationGuess, memoType: $memoType, '
-      'projectAction: $projectAction, progress: $progress)';
+      'projectAction: $projectAction, progress: $progress, alarm: $alarm, '
+      'repeatOption: $repeatOption)';
 }

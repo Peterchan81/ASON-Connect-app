@@ -4,6 +4,7 @@
 
 import '../../ason_connect/models/draft_command.dart';
 import '../../ason_connect/services/command_parser_service.dart';
+import '../../ason_connect/services/daily_goal_field_extractor.dart';
 import '../../ason_connect/services/memo_classifier.dart';
 import '../../ason_connect/services/project_field_extractor.dart';
 import '../models/entity_result.dart';
@@ -26,6 +27,8 @@ class RuleBasedEntityAnalyzer implements EntityAnalyzer {
           title: extracted.title,
           pendingLocationGuess: extracted.pendingLocationGuess,
           pendingLocationOriginal: extracted.pendingLocationOriginal,
+          alarm: extracted.alarm,
+          repeatOption: extracted.repeatOption,
         );
       case DraftCommandCategory.health:
         final extracted = _parser.extractHealthFields(text);
@@ -50,6 +53,16 @@ class RuleBasedEntityAnalyzer implements EntityAnalyzer {
           projectAction: ProjectFieldExtractor.detectAction(text),
           progress: ProjectFieldExtractor.extractProgress(text),
         );
+      case DraftCommandCategory.dailyGoal:
+        final repeat = DailyGoalFieldExtractor.extractRepeat(text);
+        final title = DailyGoalFieldExtractor.extractTitle(text, repeat: repeat);
+        return EntityResult(
+          title: title.isEmpty ? null : title,
+          repeatOption: repeat,
+        );
+      case DraftCommandCategory.diary:
+        final cleaned = _parser.cleanFreeformContent(text);
+        return EntityResult(title: cleaned.isEmpty ? null : cleaned);
     }
   }
 

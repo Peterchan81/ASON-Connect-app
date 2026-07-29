@@ -136,7 +136,15 @@ class SchedulePreviewPanel extends StatelessWidget {
     if (draft.category == DraftCommandCategory.health) {
       return [MapEntry(draft.healthItem ?? '건강', draft.title ?? '-')];
     }
-    // 메모/프로젝트 등은 한 줄 내용만 보여줍니다.
+    if (draft.category == DraftCommandCategory.dailyGoal) {
+      final rows = [MapEntry('내용', draft.title ?? '-')];
+      final repeat = draft.repeatOption;
+      if (repeat != null && repeat.trim().isNotEmpty && repeat != '없음') {
+        rows.add(MapEntry('반복', repeat));
+      }
+      return rows;
+    }
+    // 메모/프로젝트/다이어리 등은 한 줄 내용만 보여줍니다.
     return [MapEntry('내용', draft.title ?? '-')];
   }
 

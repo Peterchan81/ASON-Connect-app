@@ -2,8 +2,10 @@
 // 만들기 시작하는 로직입니다. NewTopicHandler(새 분류)와 ConfirmationHandler(애매함
 // 해소)가 똑같이 필요로 하는 절차라서, 두 Handler가 함께 재사용하도록 이 곳에 모았습니다.
 //
-// 일정 외의 카테고리도 실제 사람과 대화하듯, 꼭 필요한 내용이 빠졌으면 곧바로
-// 저장하지 않고 한 가지씩 되물은 뒤(status=collecting) 저장합니다.
+// ASON Connect는 입력 폼이 아닙니다. 값이 빠진 항목이 있어도 "시간은?"/"내용은?"처럼
+// 하나씩 되묻지 않고, 지금까지 이해한 내용 그대로 곧바로 결과 카드(ready)를
+// 보여줍니다. 빠진 항목은 카드에서 비어 있는 채로 표시되며, 사용자가 수정
+// 버튼으로 직접 채웁니다.
 
 import '../../ason_connect/models/chat_message.dart' show ChatMessageType;
 import '../../ason_connect/models/draft_command.dart';
@@ -17,15 +19,6 @@ import 'brain_result_composer.dart';
 class CategoryDraftBuilder {
   const CategoryDraftBuilder();
 
-  // 항목은 알아냈지만 값(수치/이름)이 빠진 건강 기록을 이어서 물어볼 때 쓰는 문구입니다.
-  static const Map<String, String> _healthFollowUpQuestions = {
-    '체중': '몸무게를 알려주세요. (예: 68kg)',
-    '혈압': '혈압 수치를 알려주세요. (예: 128/82)',
-    '혈당': '혈당 수치를 알려주세요.',
-    '운동': '얼마나 운동하셨나요? (예: 30분)',
-    '복용': '어떤 약을 드셨나요?',
-  };
-
   BrainResult begin(
     BrainContext context,
     DraftCommandCategory category,
@@ -38,6 +31,8 @@ class CategoryDraftBuilder {
         return _beginSchedule(context, analysisText, rawText, intent: intent);
       case DraftCommandCategory.memo:
       case DraftCommandCategory.todo:
+      case DraftCommandCategory.dailyGoal:
+      case DraftCommandCategory.diary:
         return _beginSimpleContent(
           context,
           category,
@@ -62,43 +57,27 @@ class CategoryDraftBuilder {
       DraftCommandCategory.schedule,
       analysisText,
     );
-    var draft = DraftCommand(
+    final draft = DraftCommand(
       originalText: rawText,
-      status: DraftCommandStatus.collecting,
+      status: DraftCommandStatus.ready,
       category: DraftCommandCategory.schedule,
       date: entities.date,
       time: entities.time,
       location: entities.location,
       title: entities.title,
-      pendingLocationGuess: entities.pendingLocationGuess,
-      pendingLocationOriginal: entities.pendingLocationOriginal,
+      alarm: entities.alarm,
+      repeatOption: entities.repeatOption,
     );
 
-    if (context.missingFieldAnalyzer.missingFields(draft).isEmpty) {
-      draft = draft.copyWith(status: DraftCommandStatus.ready);
-      return BrainResultComposer.compose(
-        context: context,
-        draft: draft,
-        messages: [
-          BrainMessage(
-            DraftCommandCategory.schedule.savedMessage,
-            type: ChatMessageType.summary,
-          ),
-        ],
-        turnType: BrainTurnType.newTopic,
-        changedFields: _changedFields(entities),
-        intent: intent,
-        entities: entities,
-      );
-    }
-
-    final plan = context.questionPlanner.plan(draft);
     return BrainResultComposer.compose(
       context: context,
       draft: draft,
-      messages: plan == null
-          ? const []
-          : [BrainMessage(plan.questionText, type: ChatMessageType.question)],
+      messages: [
+        BrainMessage(
+          DraftCommandCategory.schedule.savedMessage,
+          type: ChatMessageType.summary,
+        ),
+      ],
       turnType: BrainTurnType.newTopic,
       changedFields: _changedFields(entities),
       intent: intent,
@@ -114,31 +93,15 @@ class CategoryDraftBuilder {
     IntentResult? intent,
   }) {
     final entities = context.entityAnalyzer.extract(category, analysisText);
-    final hasTitle = (entities.title ?? '').trim().isNotEmpty;
 
     final draft = DraftCommand(
       originalText: rawText,
-      status: hasTitle
-          ? DraftCommandStatus.ready
-          : DraftCommandStatus.collecting,
+      status: DraftCommandStatus.ready,
       category: category,
       title: entities.title,
       memoType: entities.memoType,
+      repeatOption: entities.repeatOption,
     );
-
-    if (!hasTitle) {
-      return BrainResultComposer.compose(
-        context: context,
-        draft: draft,
-        messages: const [
-          BrainMessage('제목을 입력해주세요.', type: ChatMessageType.question),
-        ],
-        turnType: BrainTurnType.newTopic,
-        changedFields: _changedFields(entities),
-        intent: intent,
-        entities: entities,
-      );
-    }
 
     return BrainResultComposer.compose(
       context: context,
@@ -197,32 +160,15 @@ class CategoryDraftBuilder {
       DraftCommandCategory.health,
       analysisText,
     );
-    final hasValue = (entities.title ?? '').trim().isNotEmpty;
 
     final draft = DraftCommand(
       originalText: rawText,
-      status: hasValue
-          ? DraftCommandStatus.ready
-          : DraftCommandStatus.collecting,
+      status: DraftCommandStatus.ready,
       category: DraftCommandCategory.health,
       date: entities.date,
       healthItem: entities.healthItem,
       title: entities.title,
     );
-
-    if (!hasValue) {
-      final question =
-          _healthFollowUpQuestions[entities.healthItem] ?? '내용을 알려주세요.';
-      return BrainResultComposer.compose(
-        context: context,
-        draft: draft,
-        messages: [BrainMessage(question, type: ChatMessageType.question)],
-        turnType: BrainTurnType.newTopic,
-        changedFields: _changedFields(entities),
-        intent: intent,
-        entities: entities,
-      );
-    }
 
     return BrainResultComposer.compose(
       context: context,
@@ -252,6 +198,8 @@ class CategoryDraftBuilder {
     if (entities.memoType != null) changed.add('memoType');
     if (entities.projectAction != null) changed.add('projectAction');
     if (entities.progress != null) changed.add('progress');
+    if (entities.alarm != null) changed.add('alarm');
+    if (entities.repeatOption != null) changed.add('repeatOption');
     return changed;
   }
 }

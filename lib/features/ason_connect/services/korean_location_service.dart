@@ -134,8 +134,12 @@ class KoreanLocationService {
     '역',
   ];
 
+  // "읍/면/리"는 "정리"/"처리"/"관리"처럼 흔한 일반 단어와도 겹치기 쉬워
+  // 앞에 최소 2글자 이상이 있을 때만 지역명으로 봅니다. 나머지 접미사는
+  // ("중구"처럼) 1글자 지명도 있어 그대로 둡니다.
   static final RegExp _suffixPattern = RegExp(
-    '[가-힣A-Za-z0-9]{1,8}(?:${[..._adminSuffixes, ..._landmarkSuffixes].join('|')})',
+    '[가-힣A-Za-z0-9]{2,8}(?:읍|면|리)|'
+    '[가-힣A-Za-z0-9]{1,8}(?:${[..._adminSuffixes.where((s) => s != '읍' && s != '면' && s != '리'), ..._landmarkSuffixes].join('|')})',
   );
 
   // 이름 없이 "병원"/"카페"처럼 종류만 언급된 경우를 찾습니다. 앞뒤에 한글이

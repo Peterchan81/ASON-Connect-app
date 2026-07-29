@@ -11,11 +11,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final engine = BrainEngine(handlers: const [NewTopicHandler()]);
 
-  test('일정 문장은 schedule 카테고리로 draft를 시작한다', () {
+  test('일정 문장은 schedule 카테고리로 곧바로 ready 상태의 draft를 만든다', () {
     final result = engine.process(BrainInput(text: '내일 오후 3시에 팀 회의'));
 
     expect(result.draft?.category, DraftCommandCategory.schedule);
-    expect(result.draft?.status, DraftCommandStatus.collecting);
+    expect(result.draft?.status, DraftCommandStatus.ready);
     expect(result.draft?.date, '내일');
     expect(result.draft?.time, '오후 3시');
   });

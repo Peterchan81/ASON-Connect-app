@@ -46,6 +46,14 @@ class SummaryBuilder {
         return rows;
       case DraftCommandCategory.todo:
         return [MapEntry('내용', draft.title ?? '-')];
+      case DraftCommandCategory.dailyGoal:
+        final rows = [MapEntry('내용', draft.title ?? '-')];
+        if ((draft.repeatOption ?? '').trim().isNotEmpty) {
+          rows.add(MapEntry('반복', draft.repeatOption!));
+        }
+        return rows;
+      case DraftCommandCategory.diary:
+        return [MapEntry('내용', draft.title ?? '-')];
     }
   }
 
@@ -103,6 +111,21 @@ class SummaryBuilder {
           updatedAt: draft.updatedAt,
         );
       case DraftCommandCategory.todo:
+        return SyncPayload(
+          category: category.label,
+          content: draft.title ?? '-',
+          createdAt: draft.createdAt,
+          updatedAt: draft.updatedAt,
+        );
+      case DraftCommandCategory.dailyGoal:
+        return SyncPayload(
+          category: category.label,
+          content: draft.title ?? '-',
+          repeat: draft.repeatOption ?? '없음',
+          createdAt: draft.createdAt,
+          updatedAt: draft.updatedAt,
+        );
+      case DraftCommandCategory.diary:
         return SyncPayload(
           category: category.label,
           content: draft.title ?? '-',

@@ -8,10 +8,13 @@
 
 import '../../ason_connect/models/draft_command.dart';
 import '../models/health_entry.dart';
+import '../models/home_goal_entry.dart';
 import '../models/home_schedule_entry.dart';
 import '../models/memo_model.dart';
 import '../models/project_entry.dart';
+import 'diary_core_repository.dart';
 import 'field_normalizer.dart';
+import 'goal_core_repository.dart';
 import 'health_core_repository.dart';
 import 'memo_core_repository.dart';
 import 'project_core_repository.dart';
@@ -46,15 +49,21 @@ class CoreSyncMapper {
     MemoCoreRepository? memoRepository,
     HealthCoreRepository? healthRepository,
     ProjectCoreRepository? projectRepository,
+    GoalCoreRepository? goalRepository,
+    DiaryCoreRepository? diaryRepository,
   }) : _scheduleRepository = scheduleRepository ?? ScheduleCoreRepository(),
        _memoRepository = memoRepository ?? MemoCoreRepository(),
        _healthRepository = healthRepository ?? HealthCoreRepository(),
-       _projectRepository = projectRepository ?? ProjectCoreRepository();
+       _projectRepository = projectRepository ?? ProjectCoreRepository(),
+       _goalRepository = goalRepository ?? GoalCoreRepository(),
+       _diaryRepository = diaryRepository ?? DiaryCoreRepository();
 
   final ScheduleCoreRepository _scheduleRepository;
   final MemoCoreRepository _memoRepository;
   final HealthCoreRepository _healthRepository;
   final ProjectCoreRepository _projectRepository;
+  final GoalCoreRepository _goalRepository;
+  final DiaryCoreRepository _diaryRepository;
 
   static const List<String> _memoIdeaCategory = ['아이디어'];
 
@@ -90,6 +99,13 @@ class CoreSyncMapper {
         await _healthRepository.upsert(_toHealthEntry(id, draft));
       case DraftCommandCategory.project:
         await _projectRepository.upsert(_toProjectEntry(id, draft));
+      case DraftCommandCategory.dailyGoal:
+        await _goalRepository.upsert(_toGoalEntry(id, draft));
+      case DraftCommandCategory.diary:
+        await _diaryRepository.append(
+          FieldNormalizer.resolveDate(draft.date),
+          (draft.title ?? '-').trim(),
+        );
     }
     return const CoreSyncResult.success();
   }
@@ -149,6 +165,14 @@ class CoreSyncMapper {
       date: draft.date,
       createdAt: draft.createdAt,
       updatedAt: draft.updatedAt,
+    );
+  }
+
+  HomeGoalEntry _toGoalEntry(String id, DraftCommand draft) {
+    return HomeGoalEntry(
+      id: id,
+      title: (draft.title ?? '-').trim(),
+      isDone: false,
     );
   }
 

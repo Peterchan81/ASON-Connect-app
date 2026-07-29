@@ -11,10 +11,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('음성으로 말한 문장이 VoiceService -> ConversationManager -> BrainEngine을 거쳐'
-      ' 일정 draft로 만들어진다 ("내일 병원 예약" -> 언제/어느 병원/알림 순서로 되묻는다)', () async {
+      ' 곧바로 일정 결과 카드로 만들어진다 (되묻지 않고, 비어 있는 항목은 수정으로 채운다)', () async {
     final voice = VoiceService(
       provider: MockSpeechProvider(
-        scriptedText: '내일 병원 예약',
+        scriptedText: '내일 오후 3시 대전성모병원 예약',
         respondAfter: const Duration(milliseconds: 10),
       ),
     );
@@ -31,35 +31,19 @@ void main() {
 
     expect(voice.state, VoiceState.success);
 
-    var draft = manager.currentDraft;
+    final draft = manager.currentDraft;
     expect(draft?.category, DraftCommandCategory.schedule);
     expect(draft?.date, '내일');
-    expect(draft?.title, '병원 예약');
-    expect(draft?.status, DraftCommandStatus.collecting);
-    expect(manager.messages.last.text, '몇 시 일정인가요?');
-
-    manager.handleUserText('오후 3시', inputSource: InputSource.voice);
-    expect(manager.messages.last.text, '어느 병원인가요?');
-
-    manager.handleUserText('대전성모병원', inputSource: InputSource.voice);
-    expect(
-      manager.messages.last.text,
-      '일정을 확인했습니다.\n알림을 설정하시겠습니까?\n예: 30분 전 알림',
-    );
-
-    manager.handleUserText('30분 전', inputSource: InputSource.voice);
-    draft = manager.currentDraft;
-    expect(draft?.status, DraftCommandStatus.ready);
+    expect(draft?.time, '오후 3시');
     expect(draft?.location, '대전성모병원');
-    expect(draft?.alarm, '30분 전');
+    expect(draft?.status, DraftCommandStatus.ready);
     expect(manager.messages.last.text, '일정을 저장했습니다.');
   });
 
-  test('음성 인식 결과가 이어지면 알림 답변까지 처리되어 Summary/Sync가 준비된다', () async {
+  test('음성 인식 결과는 되묻지 않고 곧바로 Summary/Sync가 준비된다', () async {
     final manager = ConversationManager();
 
     manager.handleUserText('내일 오후 3시에 팀 회의', inputSource: InputSource.voice);
-    manager.handleUserText('없음', inputSource: InputSource.voice);
 
     expect(manager.currentDraft?.status, DraftCommandStatus.ready);
     expect(manager.isSummaryAvailable, isTrue);

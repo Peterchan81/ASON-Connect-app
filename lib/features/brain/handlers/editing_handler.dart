@@ -88,6 +88,10 @@ class EditingHandler implements BrainTurnHandler {
         return const ['title', 'projectAction', 'progress'];
       case DraftCommandCategory.todo:
         return const ['title'];
+      case DraftCommandCategory.dailyGoal:
+        return const ['title', 'repeat'];
+      case DraftCommandCategory.diary:
+        return const ['title'];
       case null:
         return const [];
     }

@@ -31,9 +31,13 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
     provider: SpeechRecognitionProvider(),
   );
 
-  // 입력 방식은 이번 세션에서만 유지합니다(기기에 저장하지 않음). 선택 화면
-  // 없이 곧바로 사용할 수 있도록 키보드 모드로 시작합니다.
+  // 입력 방식은 이번 세션에서만 유지합니다(기기에 저장하지 않음).
   AsonInputMode _inputMode = AsonInputMode.keyboard;
+
+  // 첫 화면에서는 "음성으로 말하기"/"문자로 입력하기" 중 하나를 명확히
+  // 고르기 전까지 입력창을 보여주지 않습니다. 하나를 고르면 곧바로 그
+  // 방식으로 입력을 시작합니다.
+  bool _hasStartedInput = false;
 
   // 마이크 버튼이 연속으로 눌려도 중복 처리되지 않게 막는 잠금 장치입니다.
   bool _isHandlingVoiceTap = false;
@@ -68,6 +72,7 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
   /// 시작하지 않았을 때만(= 첫 문장을 입력하는 중일 때만) 미리보기를 씁니다.
   void _handleTextChangedForPreview() {
     if (_conversationManager.currentDraft != null) return;
+    if (_conversationManager.hasItems) return;
 
     _previewDebounce?.cancel();
     final text = _textController.text;
@@ -107,12 +112,29 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
     });
   }
 
+  /// 첫 화면에서 "음성으로 말하기"를 골랐을 때 실행됩니다.
+  void _selectVoiceStart() {
+    setState(() {
+      _hasStartedInput = true;
+      _inputMode = AsonInputMode.voice;
+    });
+  }
+
+  /// 첫 화면에서 "문자로 입력하기"를 골랐을 때 실행됩니다.
+  void _selectKeyboardStart() {
+    setState(() {
+      _hasStartedInput = true;
+      _inputMode = AsonInputMode.keyboard;
+    });
+  }
+
   /// 문자 입력창의 문장을 전송합니다.
   void _handleSend() {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
     setState(() {
+      _hasStartedInput = true;
       _conversationManager.handleUserText(
         text,
         inputSource: InputSource.keyboard,
@@ -150,6 +172,57 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
       setState(() {
         _conversationManager.reset();
         _textController.clear();
+        _hasStartedInput = false;
+      });
+    } else {
+      setState(() {});
+    }
+  }
+
+  /// 여러 항목 중 하나의 수정 버튼입니다.
+  void _handleItemEdit(int index) {
+    setState(() {
+      _conversationManager.beginEditItem(index);
+    });
+  }
+
+  /// 여러 항목 중 하나의 동기화 버튼입니다. 성공하면 그 카드만 목록에서
+  /// 사라지고, 남은 항목이 없으면 화면이 첫 상태로 돌아갑니다.
+  Future<void> _handleItemSync(int index) async {
+    setState(() {
+      _conversationManager.beginSyncItem(index);
+    });
+
+    final succeeded = await _conversationManager.finishSyncItem(index);
+    if (!mounted) return;
+
+    if (succeeded) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ASON에 저장되었습니다.')));
+      setState(() {
+        if (!_conversationManager.hasItems) {
+          _textController.clear();
+          _hasStartedInput = false;
+        }
+      });
+    } else {
+      setState(() {});
+    }
+  }
+
+  /// "모두 ASON에 동기화" 버튼입니다. 준비된 모든 항목을 순서대로 동기화합니다.
+  Future<void> _handleSyncAll() async {
+    await _conversationManager.syncAllItems();
+    if (!mounted) return;
+
+    if (!_conversationManager.hasItems) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ASON에 저장되었습니다.')));
+      setState(() {
+        _textController.clear();
+        _hasStartedInput = false;
       });
     } else {
       setState(() {});
@@ -194,6 +267,7 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
 
     // 인식된 문장을 전달했다는 표시(success)는 VoiceService가 이미 보여주고 있습니다.
     setState(() {
+      _hasStartedInput = true;
       _conversationManager.handleUserText(text, inputSource: InputSource.voice);
       _livePreviewDraft = null;
       _textController.clear();
@@ -210,6 +284,7 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
   Widget build(BuildContext context) {
     final draft = _conversationManager.currentDraft;
     final panelDraft = draft ?? _livePreviewDraft;
+    final showStartSelector = !_hasStartedInput;
 
     return CyberScaffold(
       appBar: CyberTopBar(
@@ -230,20 +305,23 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
         child: Column(
           children: [
             Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Text(
-                    '말하거나 입력해 주세요.\nASON이 내용을 정리합니다.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 1.6,
-                      color: AsonColors.onBackgroundMuted(context),
-                    ),
-                  ),
-                ),
-              ),
+              child: showStartSelector
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          '생각하지 말고 말하세요.\nASON이 정리합니다.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 18,
+                            height: 1.6,
+                            fontWeight: FontWeight.w600,
+                            color: AsonColors.onBackgroundMuted(context),
+                          ),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
             ValueListenableBuilder<VoiceState>(
               valueListenable: _voiceService.stateNotifier,
@@ -255,6 +333,9 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
                   onSend: _handleSend,
                   micPhase: _micPhaseFor(voiceState),
                   onMicPressed: _onMicPressed,
+                  showStartSelector: showStartSelector,
+                  onSelectVoice: _selectVoiceStart,
+                  onSelectKeyboard: _selectKeyboardStart,
                   panelDraft: panelDraft,
                   panelIsPreviewOnly: draft == null,
                   panelPendingQuestion: _conversationManager.pendingQuestion,
@@ -262,6 +343,11 @@ class _AsonConnectScreenState extends State<AsonConnectScreen> {
                   onPanelEdit: _handleEdit,
                   onPanelSync: _handleSync,
                   standaloneGuidance: _conversationManager.standaloneGuidance,
+                  items: _conversationManager.items,
+                  allItemsReady: _conversationManager.allItemsReady,
+                  onItemEdit: _handleItemEdit,
+                  onItemSync: _handleItemSync,
+                  onSyncAll: _handleSyncAll,
                 );
               },
             ),

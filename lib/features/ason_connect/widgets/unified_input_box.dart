@@ -1,7 +1,8 @@
 // ASON Connect의 유일한 입력 영역입니다. 음성/키보드 모드와 관계없이 항상
-// 같은 위치·같은 크기의 박스 하나를 씁니다. 왼쪽 아이콘이 지금 모드를
-// 나타내며(음성=마이크, 키보드=키보드), 눌러서 모드를 바꿉니다. 오른쪽
-// 아이콘은 모드에 맞는 실행 동작입니다(키보드=전송, 음성=듣기 시작/중지).
+// 같은 위치·같은 크기의 박스 하나를 씁니다. 왼쪽에는 지금 모드를 다른
+// 방식으로 바꿀 수 있는, 아이콘만 있지 않은 명확한 텍스트 버튼("문자로
+// 입력하기"/"음성으로 입력하기")이 있습니다. 오른쪽 아이콘은 모드에 맞는
+// 실행 동작입니다(키보드=전송, 음성=듣기 시작/중지).
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -58,12 +59,18 @@ class UnifiedInputBox extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Tooltip(
-              message: isVoice ? '키보드로 전환' : '음성으로 전환',
-              child: IconButton(
-                onPressed: onToggleMode,
-                icon: Icon(
-                  isVoice ? Icons.mic_rounded : Icons.keyboard_alt_outlined,
+            TextButton(
+              onPressed: onToggleMode,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 36),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                isVoice ? '문자로 입력하기' : '음성으로 입력하기',
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
                   color: AsonColors.primary,
                 ),
               ),

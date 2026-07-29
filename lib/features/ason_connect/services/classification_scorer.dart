@@ -50,7 +50,15 @@ class ClassificationScorer {
       '방문',
       '예약',
     ],
-    DraftCommandCategory.memo: ['메모', '기억', '적어', '기록', '사야', '구매'],
+    DraftCommandCategory.memo: [
+      '메모',
+      '기억',
+      '적어',
+      '기록',
+      '사야',
+      '구매',
+      '아이디어',
+    ],
     DraftCommandCategory.health: [
       '몸무게',
       '체중',
@@ -67,7 +75,45 @@ class ClassificationScorer {
     ],
     DraftCommandCategory.project: ['프로젝트', '개발', '아이디어', '기획', '수정'],
     DraftCommandCategory.todo: ['해야', '할 일', '할일', '준비', '처리'],
+    DraftCommandCategory.dailyGoal: [
+      '스트레칭',
+      '걷기',
+      '요가',
+      '명상',
+      '독서',
+      '다이어트',
+      '물 마시기',
+      '습관',
+      '운동',
+      '공부',
+    ],
+    DraftCommandCategory.diary: [
+      '기분',
+      '일기',
+      '오늘 하루',
+      '즐거웠',
+      '행복했',
+      '속상했',
+      '힘들었',
+    ],
   };
+
+  // 나의 하루 목표의 핵심 신호인 "반복" 표현입니다. (매일/매주 등)
+  static final RegExp _repeatCuePattern = RegExp(
+    r'매일\s*아침|매일\s*저녁|매일\s*밤|매주\s*[가-힣]+요일|매일|매주|매달',
+  );
+
+  // 다이어리의 핵심 신호인, 하루를 돌아보는 과거형 감정 표현입니다.
+  static final RegExp _emotionPastPattern = RegExp(
+    r'좋았|나빴|힘들었|즐거웠|행복했|슬펐|속상했|피곤했|괜찮았|재밌었|재미있었',
+  );
+
+  // "정리해 두기"/"견적서 보내기"처럼, 날짜·시간·반복 없이 한 번만 처리하면
+  // 되는 일을 나타내는 문장 끝 표현입니다. 이런 문장은 기본적으로 메모로
+  // 봅니다. (반복 표현이 있으면 나의 하루 목표가 우선이므로 제외합니다)
+  static final RegExp _bareActionTaskPattern = RegExp(
+    r'(하기|보내기|만들기|전달하기|정리하기|확인하기|준비하기|처리하기|두기)\s*[.!?]*$',
+  );
 
   // 일정의 시간 표현과 건강의 운동 표현은 분류 점수 계산과 필드 추출(ScheduleFieldExtractor,
   // HealthFieldExtractor) 양쪽에서 함께 쓰이므로, 이 클래스에서 공개 상수로 관리합니다.
@@ -141,10 +187,25 @@ class ClassificationScorer {
         }
         break;
       case DraftCommandCategory.memo:
+        if (_purchasePrepPattern.hasMatch(text)) score += 2;
+        if (!_repeatCuePattern.hasMatch(text) &&
+            _bareActionTaskPattern.hasMatch(text)) {
+          score += 2;
+        }
+        break;
       case DraftCommandCategory.todo:
         if (_purchasePrepPattern.hasMatch(text)) score += 2;
         break;
       case DraftCommandCategory.project:
+        break;
+      case DraftCommandCategory.dailyGoal:
+        // "매일 아침 운동하기"처럼 반복 표현이 함께 있으면 건강 기록이 아니라
+        // 습관/목표로 확신합니다. (반복 표현이 없으면 건강 기록일 수도 있으므로
+        // 보너스를 주지 않습니다)
+        if (_repeatCuePattern.hasMatch(text)) score += 3;
+        break;
+      case DraftCommandCategory.diary:
+        if (_emotionPastPattern.hasMatch(text)) score += 3;
         break;
     }
 

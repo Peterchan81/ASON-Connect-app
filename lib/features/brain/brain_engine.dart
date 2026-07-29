@@ -23,8 +23,6 @@ import 'handlers/confirmation_handler.dart';
 import 'handlers/editing_handler.dart';
 import 'handlers/fallback_handler.dart';
 import 'handlers/new_topic_handler.dart';
-import 'handlers/schedule_continuation_handler.dart';
-import 'handlers/simple_continuation_handler.dart';
 import 'models/brain_input.dart';
 import 'models/brain_result.dart';
 import 'models/brain_turn_type.dart';
@@ -69,15 +67,15 @@ class BrainEngine {
       locationService: resolvedLocationService,
       // 대화 단계에 맞는 Handler를 순서대로 검사합니다. NewTopicHandler는 항상
       // canHandle=true라서 목록 맨 끝에 두어 "다른 어떤 단계도 아니면 새 주제로
-      // 시작한다"는 기존 동작을 그대로 재현합니다.
+      // 시작한다"는 기존 동작을 그대로 재현합니다. ASON Connect는 입력 폼이
+      // 아니므로, 부족한 필드를 하나씩 되묻는 Handler(Schedule/SimpleContinuation)는
+      // 두지 않습니다 — 새 입력은 항상 곧바로 결과 카드(ready)가 됩니다.
       handlers:
           handlers ??
           const [
             FallbackHandler(),
             ConfirmationHandler(),
             EditingHandler(),
-            ScheduleContinuationHandler(),
-            SimpleContinuationHandler(),
             NewTopicHandler(),
           ],
     );

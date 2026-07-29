@@ -11,8 +11,11 @@
 
 import '../../brain/brain_engine.dart';
 import '../../brain/models/brain_input.dart';
+import '../../brain/models/brain_result.dart';
+import '../../brain/services/multi_intent_splitter.dart';
 import '../../core_sync/services/core_sync_mapper.dart';
 import '../models/chat_message.dart';
+import '../models/connect_item.dart';
 import '../models/draft_command.dart';
 import '../models/sync_payload.dart';
 import 'command_parser_service.dart';
@@ -27,6 +30,7 @@ class ConversationManager {
     MockSyncService? syncService,
     BrainEngine? brainEngine,
     CoreSyncMapper? coreSyncMapper,
+    MultiIntentSplitter? multiIntentSplitter,
   }) {
     final resolvedLocationService = locationService ?? KoreanLocationService();
     final resolvedParser =
@@ -41,6 +45,7 @@ class ConversationManager {
             parser: resolvedParser,
             locationService: resolvedLocationService,
           ),
+      splitter: multiIntentSplitter ?? const MultiIntentSplitter(),
     );
   }
 
@@ -48,11 +53,13 @@ class ConversationManager {
     required this._syncService,
     required this._coreSyncMapper,
     required this._brain,
+    required this._splitter,
   });
 
   final MockSyncService _syncService;
   final CoreSyncMapper _coreSyncMapper;
   final BrainEngine _brain;
+  final MultiIntentSplitter _splitter;
   final SummaryBuilder _summaryBuilder = const SummaryBuilder();
 
   final List<ChatMessage> _messages = [];
@@ -64,6 +71,22 @@ class ConversationManager {
 
   /// 지금 작성 중인 내용입니다. 없으면 null입니다.
   DraftCommand? get currentDraft => _draft;
+
+  final List<ConnectItem> _items = [];
+
+  /// 한 번의 입력에서 여러 개의 의도(일정/나의 하루 목표/다이어리/메모)로 나뉜
+  /// 경우, 항목별로 보여줄 목록입니다. 나뉘지 않은 보통의 대화는 이 목록 대신
+  /// [currentDraft] 하나만 사용합니다.
+  List<ConnectItem> get items => List.unmodifiable(_items);
+
+  /// 두 개 이상의 항목으로 나뉜 입력이 진행 중인지 여부입니다.
+  bool get hasItems => _items.isNotEmpty;
+
+  /// 모든 항목이 정보 부족 없이 준비되어, "모두 ASON에 동기화" 버튼을 보여줄 수
+  /// 있는 상태인지 여부입니다.
+  bool get allItemsReady =>
+      _items.isNotEmpty &&
+      _items.every((item) => item.draft.status == DraftCommandStatus.ready);
 
   int _seq = 0;
 
@@ -122,7 +145,7 @@ class ConversationManager {
   /// 사용자에게 전할 안내가 있으면 그 문구입니다. (예: 애매한 일반 대화에
   /// 대한 안내) draft가 있으면 그 안에서 이미 보여주므로 null입니다.
   String? get standaloneGuidance {
-    if (_draft != null) return null;
+    if (_draft != null || _items.isNotEmpty) return null;
     return _lastAsonMessageText;
   }
 
@@ -146,16 +169,148 @@ class ConversationManager {
     final rawText = rawInput.trim();
     if (rawText.isEmpty) return;
 
-    _addUser(rawText);
-    _lastSyncError = null;
+    // 1) 단일 항목 대화가 진행 중이면(후속 질문 답변/수정 답변 등) 그대로
+    // 이어갑니다. 기존 동작과 완전히 동일합니다.
+    if (_draft != null) {
+      _addUser(rawText);
+      _lastSyncError = null;
+      final result = _brain.process(
+        BrainInput(text: rawText, draft: _draft, inputSource: inputSource),
+      );
+      _draft = result.draft;
+      for (final message in result.messages) {
+        _addAson(message.text, type: message.type);
+      }
+      return;
+    }
 
-    final result = _brain.process(
-      BrainInput(text: rawText, draft: _draft, inputSource: inputSource),
+    // 2) 여러 항목 중 하나가 정보 부족으로 답변을 기다리고 있으면, 그 항목에
+    // 이어서 답합니다. (한 번에 하나씩만 묻고, 이미 아는 정보는 다시 묻지 않습니다)
+    final pendingIndex = _items.indexWhere((item) => item.isPending);
+    if (pendingIndex != -1) {
+      final current = _items[pendingIndex];
+      final result = _brain.process(
+        BrainInput(
+          text: rawText,
+          draft: current.draft,
+          inputSource: inputSource,
+        ),
+      );
+      final updatedDraft = result.draft;
+      if (updatedDraft == null) return;
+      _items[pendingIndex] = ConnectItem(
+        draft: updatedDraft,
+        pendingQuestion: _questionFrom(result, updatedDraft),
+      );
+      return;
+    }
+
+    // 3) 새 입력입니다. 한 문장에 여러 의도가 섞여 있는지 먼저 나눠 봅니다.
+    final clauses = _splitter.splitClauses(rawText);
+    if (clauses.length <= 1) {
+      _addUser(rawText);
+      _lastSyncError = null;
+      final result = _brain.process(
+        BrainInput(text: rawText, draft: null, inputSource: inputSource),
+      );
+      _draft = result.draft;
+      for (final message in result.messages) {
+        _addAson(message.text, type: message.type);
+      }
+      return;
+    }
+
+    // 절이 2개 이상이면, 절 하나하나를 독립된 항목으로 분석해 카드로 보여줍니다.
+    for (final clause in clauses) {
+      final result = _brain.process(
+        BrainInput(text: clause, draft: null, inputSource: inputSource),
+      );
+      final draft = result.draft;
+      // 분류할 수 없는 절은 억지로 항목을 만들지 않고 건너뜁니다.
+      if (draft == null) continue;
+      _items.add(
+        ConnectItem(draft: draft, pendingQuestion: _questionFrom(result, draft)),
+      );
+    }
+  }
+
+  /// 이번 턴 결과에서, 지금 되묻는 중이면 보여줄 질문 문구를 뽑아냅니다.
+  /// 되묻는 중이 아니면(정보가 충분하거나 준비 완료) null입니다.
+  String? _questionFrom(BrainResult result, DraftCommand draft) {
+    if (draft.status != DraftCommandStatus.collecting &&
+        draft.status != DraftCommandStatus.clarifyingCategory &&
+        draft.status != DraftCommandStatus.editing) {
+      return null;
+    }
+    if (result.messages.isEmpty) return null;
+    return result.messages.last.text;
+  }
+
+  /// 여러 항목 중 하나(수정 버튼): 내용을 지우지 않고 무엇을 바꿀지 되묻습니다.
+  void beginEditItem(int index) {
+    if (index < 0 || index >= _items.length) return;
+    final item = _items[index];
+    if (item.draft.status != DraftCommandStatus.ready) return;
+    _items[index] = item.copyWith(
+      draft: item.draft.copyWith(status: DraftCommandStatus.editing),
+      pendingQuestion: '어떤 내용을 수정할까요?',
     );
+  }
 
-    _draft = result.draft;
-    for (final message in result.messages) {
-      _addAson(message.text, type: message.type);
+  /// 여러 항목 중 하나(동기화 버튼): 동기화 상태로 전환합니다.
+  void beginSyncItem(int index) {
+    if (index < 0 || index >= _items.length) return;
+    final item = _items[index];
+    if (item.draft.status != DraftCommandStatus.ready) return;
+    _items[index] = item.copyWith(
+      draft: item.draft.copyWith(status: DraftCommandStatus.syncing),
+      clearSyncError: true,
+    );
+  }
+
+  /// [index] 항목의 실제 동기화를 수행합니다. 성공하면 목록에서 사라지고
+  /// (=화면에서 자동으로 정리됨), 실패하면 그 항목에 실패 이유를 남깁니다.
+  Future<bool> finishSyncItem(int index) async {
+    if (index < 0 || index >= _items.length) return false;
+    final item = _items[index];
+    if (item.draft.status != DraftCommandStatus.syncing) return false;
+
+    try {
+      final result = await _coreSyncMapper.sync(item.draft);
+      if (result.isSuccess) {
+        if (index < _items.length) _items.removeAt(index);
+        return true;
+      }
+      if (index < _items.length) {
+        _items[index] = item.copyWith(
+          draft: item.draft.copyWith(status: DraftCommandStatus.ready),
+          syncError: result.errorMessage ?? '동기화 중 오류가 발생했습니다.',
+        );
+      }
+      return false;
+    } catch (_) {
+      if (index < _items.length) {
+        _items[index] = item.copyWith(
+          draft: item.draft.copyWith(status: DraftCommandStatus.ready),
+          syncError: '동기화 중 오류가 발생했습니다.',
+        );
+      }
+      return false;
+    }
+  }
+
+  /// 준비된 모든 항목을 순서대로 동기화합니다. 실패한 항목은 목록에 남고,
+  /// 실패 이유는 그 항목의 카드에 표시됩니다.
+  Future<void> syncAllItems() async {
+    var index = 0;
+    while (index < _items.length) {
+      if (_items[index].draft.status != DraftCommandStatus.ready) {
+        index++;
+        continue;
+      }
+      beginSyncItem(index);
+      final succeeded = await finishSyncItem(index);
+      if (!succeeded) index++;
     }
   }
 
@@ -273,6 +428,7 @@ class ConversationManager {
   void reset() {
     _messages.clear();
     _draft = null;
+    _items.clear();
     _lastSyncError = null;
   }
 

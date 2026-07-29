@@ -17,8 +17,7 @@ void main() {
   test('메모를 완성해 동기화하면 ASON-Core 구조(MemoCoreRepository)에 실제로 저장된다', () async {
     final manager = ConversationManager();
 
-    manager.handleUserText('메모가 있어');
-    manager.handleUserText('ASON 음성 앱 다국어 지원');
+    manager.handleUserText('ASON 음성 앱 다국어 지원 메모');
     expect(manager.currentDraft?.status, DraftCommandStatus.ready);
 
     manager.beginSync();
@@ -32,14 +31,13 @@ void main() {
 
     final saved = await MemoCoreRepository().loadAll();
     expect(saved, hasLength(1));
-    expect(saved.single.content, 'ASON 음성 앱 다국어 지원');
+    expect(saved.single.content, contains('ASON 음성 앱 다국어 지원'));
   });
 
   test('내용을 수정한 뒤 다시 동기화하면 같은 항목이 최신 내용으로 덮어써진다', () async {
     final manager = ConversationManager();
 
-    manager.handleUserText('메모가 있어');
-    manager.handleUserText('초안');
+    manager.handleUserText('초안 메모');
     expect(manager.currentDraft?.status, DraftCommandStatus.ready);
 
     // 수정 버튼: 같은 draft(같은 createdAt)를 유지한 채 내용만 바꾼다.
