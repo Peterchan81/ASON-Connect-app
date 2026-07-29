@@ -13,8 +13,18 @@ class MultiIntentSplitter {
   const MultiIntentSplitter();
 
   // 쉼표/마침표뿐 아니라 줄바꿈도 절 경계로 봅니다. 사용자가 문장 부호 없이
-  // 줄만 바꿔가며 말하는 경우가 많기 때문입니다.
-  static final RegExp _clauseDelimiter = RegExp(r'[,、.!\n]+\s*');
+  // 줄만 바꿔가며 말하는 경우가 많기 때문입니다. "그리고/그다음/또/하고"처럼
+  // 앞뒤에 공백을 두고 독립된 단어로 쓰인 연결어도 같은 경계로 봅니다. (앞뒤
+  // 공백이 있을 때만 매치하므로 "미팅하고"처럼 동사에 바로 붙은 어미는 건드리지
+  // 않습니다)
+  static final RegExp _clauseDelimiter = RegExp(
+    r'[,、.!\n]+\s*|\s+(?:그리고|그다음|하고|또)\s+',
+  );
+
+  // 쉼표가 반복되거나 연결어끼리 붙어 있으면("…가고, 그리고, …") 연결어 하나만
+  // 남은 빈 절이 생길 수 있습니다. 실질적인 내용이 없는 이런 절은 카드로 만들지
+  // 않고 건너뜁니다.
+  static final RegExp _bareConnective = RegExp(r'^(그리고|그다음|하고|또)$');
 
   // "1시간 전에 알려주고"처럼, 앞 절(주로 일정)의 알림만 덧붙이는 절인지
   // 판단하는 신호입니다. 숫자(또는 한글 수사) + 시간/분 + 전 + 알림 관련 동사가
@@ -49,6 +59,7 @@ class MultiIntentSplitter {
 
     final merged = <String>[];
     for (final clause in clauses) {
+      if (_bareConnective.hasMatch(clause)) continue;
       if (merged.isNotEmpty && _reminderAttachmentPattern.hasMatch(clause)) {
         merged[merged.length - 1] = '${merged.last} $clause';
       } else {

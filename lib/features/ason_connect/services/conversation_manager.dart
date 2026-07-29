@@ -260,11 +260,16 @@ class ConversationManager {
     );
   }
 
-  /// 여러 항목 중 하나(동기화 버튼): 동기화 상태로 전환합니다.
+  /// 여러 항목 중 하나(동기화 버튼): 동기화 상태로 전환합니다. 핵심 내용이 없는
+  /// 카드는 UI에서 버튼이 비활성화되지만, 여기서도 한 번 더 막아 syncing으로
+  /// 전환하지 않습니다(MockSyncService/CoreSyncMapper 호출 자체가 일어나지
+  /// 않습니다). ready 상태와 카드의 기존 안내 문구만 그대로 유지되고, 새 질문
+  /// 이나 메시지는 만들지 않습니다.
   void beginSyncItem(int index) {
     if (index < 0 || index >= _items.length) return;
     final item = _items[index];
     if (item.draft.status != DraftCommandStatus.ready) return;
+    if (!item.draft.hasRequiredContent) return;
     _items[index] = item.copyWith(
       draft: item.draft.copyWith(status: DraftCommandStatus.syncing),
       clearSyncError: true,
@@ -368,9 +373,16 @@ class ConversationManager {
   /// ASON에 동기화 버튼: 동기화 상태로 전환합니다. (동기 처리 부분)
   /// "동기화하는 중" 표시는 화면(로딩 인디케이터)에서 보여주므로 여기서는
   /// 별도의 대화 메시지를 남기지 않습니다.
+  ///
+  /// 핵심 내용이 없는 카드는 UI에서 버튼이 비활성화되지만, 여기서도 한 번 더
+  /// 막아 syncing으로 전환하지 않습니다(MockSyncService/CoreSyncMapper 호출
+  /// 자체가 일어나지 않습니다). draft는 ready 상태 그대로 유지되고, 카드의
+  /// 기존 안내 문구([DraftCommand.validationMessage]) 외에 새 질문이나
+  /// 메시지는 만들지 않습니다.
   void beginSync() {
     final draft = _draft;
     if (draft == null || draft.status != DraftCommandStatus.ready) return;
+    if (!draft.hasRequiredContent) return;
 
     _draft = draft.copyWith(status: DraftCommandStatus.syncing);
   }

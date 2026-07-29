@@ -115,8 +115,11 @@ class CoreSyncMapper {
       case DraftCommandCategory.dailyGoal:
         await _goalRepository.upsert(_toGoalEntry(id, draft));
       case DraftCommandCategory.diary:
-        await _diaryRepository.append(
+        // id 기반으로 저장합니다: 같은 draft(같은 id)를 수정 후 다시 동기화해도
+        // 줄이 중복으로 늘어나지 않고 그 줄만 최신 내용으로 바뀝니다.
+        await _diaryRepository.upsert(
           FieldNormalizer.resolveDate(draft.date),
+          id,
           (draft.title ?? '-').trim(),
         );
     }
