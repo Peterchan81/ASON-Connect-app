@@ -35,6 +35,14 @@ dependencies:
   shared_preferences: ^2.5.5
   crypto: ^3.0.6
 
+  # Phase 1: ASON Core와 공유할 Supabase 연결 기반. 초기화만 안전하게
+  # 준비하며(앱 시작 시 크래시 없이 폴백), 이번 Phase에서는 MockSyncService/
+  # CoreSyncMapper를 대체하는 실제 insert/upsert 호출은 하지 않는다.
+  supabase_flutter: ^2.8.0
+
+  # 클라이언트 공개용 환경변수(.env)에서 SUPABASE_URL/ANON_KEY를 읽어온다.
+  flutter_dotenv: ^5.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

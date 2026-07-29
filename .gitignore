@@ -1,3 +1,7 @@
+# Environment variables (Supabase URL/anon key) — never commit real values.
+.env
+.env.local
+
 # Miscellaneous
 *.class
 *.log
