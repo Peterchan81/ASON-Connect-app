@@ -1,6 +1,8 @@
 // "나의 하루 목표" 문장에서 반복 주기와 실제 행동(내용)을 뽑아냅니다.
 // 예: "매일 아침 스트레칭하기" -> 반복="매일 아침", 내용="스트레칭"
 
+import 'title_normalizer.dart';
+
 class DailyGoalFieldExtractor {
   const DailyGoalFieldExtractor._();
 
@@ -26,6 +28,7 @@ class DailyGoalFieldExtractor {
     }
     result = result.replaceAll(RegExp(r'[,.!?]+$'), '').trim();
     result = result.replaceFirst(_actionSuffix, '').trim();
-    return result;
+    if (result.isEmpty) return result;
+    return TitleNormalizer.normalizeActionTitle(result);
   }
 }

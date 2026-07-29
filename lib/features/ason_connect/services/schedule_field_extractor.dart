@@ -5,6 +5,7 @@
 
 import 'classification_scorer.dart';
 import 'korean_location_service.dart';
+import 'title_normalizer.dart';
 
 /// 일정 문장에서 뽑아낸 값들입니다.
 class ScheduleExtraction {
@@ -52,9 +53,10 @@ class ScheduleFieldExtractor {
   // 내용으로 씁니다.
   static final RegExp _existentialFillerSuffix = RegExp(r'\s*(있어|있다|있음|이야|야)$');
 
-  // "광고미팅하고"처럼, 다음 절로 이어지는 연결 어미가 내용 끝에 남아 있으면
-  // 떼어냅니다. (여러 의도로 나뉘기 전 원문을 그대로 분석할 때 남을 수 있음)
-  static final RegExp _trailingConnective = RegExp(r'(하고|이고|며)$');
+  // "회의이고"/"확인하며"처럼, 다음 절로 이어지는 연결 어미가 내용 끝에
+  // 남아 있으면 떼어냅니다. "-하고"로 끝나는 경우는 여기서 지우지 않고
+  // TitleNormalizer가 "-하기" 형태로 자연스럽게 바꿉니다.
+  static final RegExp _trailingConnective = RegExp(r'(이고|며)$');
 
   // "알람 1시간 전", "한 시간 전에 알려주고"처럼 문장에 직접 포함된 알림 표현입니다.
   // 앞의 "알람/알림" 명사와 뒤에 붙는 "알려주고/알려줘" 같은 동사까지 함께 제거해야
@@ -164,12 +166,15 @@ class ScheduleFieldExtractor {
     // 보고, 이후 "일정 내용은 무엇인가요?"라고 따로 물어봅니다. "광고미팅"처럼
     // 키워드가 포함된 실제 내용은 그대로 유효한 내용으로 씁니다.
     final isBareCategoryWord = _bareCategoryWord.hasMatch(title);
+    final normalizedTitle = title.isEmpty || isBareCategoryWord
+        ? null
+        : TitleNormalizer.normalizeActionTitle(title);
 
     return ScheduleExtraction(
       date: date,
       time: time,
       location: location,
-      title: (title.isEmpty || isBareCategoryWord) ? null : title,
+      title: normalizedTitle,
       pendingLocationGuess: pendingGuess,
       pendingLocationOriginal: pendingOriginal,
       alarm: alarm,

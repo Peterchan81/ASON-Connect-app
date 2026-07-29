@@ -46,6 +46,55 @@ void main() {
       expect(clauses, hasLength(1));
       expect(clauses.single, '내일 오후 3시에 병원에 가서 검사하고 약도 받아야 해');
     });
+
+    test('신호(반복/메모 요청)가 전혀 없으면 "-고"가 있어도 나누지 않는다', () {
+      expect(splitter.splitClauses('친구하고 영화 보기'), ['친구하고 영화 보기']);
+      expect(splitter.splitClauses('공부하고 싶다'), ['공부하고 싶다']);
+    });
+  });
+
+  group('메모 요청 표현으로 절 경계 인식', () {
+    test('쉼표 없이 이어 말해도 메모 요청 앞의 "-고" 지점에서 나뉜다', () {
+      final clauses = splitter.splitClauses('매일 30분씩 걷고 우유 사는 것을 메모해줘');
+      expect(clauses, ['매일 30분씩 걷고', '우유 사는 것을 메모해줘']);
+    });
+
+    test('기록해줘/적어줘/기억해줘도 같은 방식으로 경계를 인식한다', () {
+      expect(splitter.splitClauses('매일 30분씩 걷고 우유 사는 것을 기록해줘'), [
+        '매일 30분씩 걷고',
+        '우유 사는 것을 기록해줘',
+      ]);
+      expect(splitter.splitClauses('매일 30분씩 걷고 우유 사는 것을 적어줘'), [
+        '매일 30분씩 걷고',
+        '우유 사는 것을 적어줘',
+      ]);
+      expect(splitter.splitClauses('매일 30분씩 걷고 우유 사는 것을 기억해줘'), [
+        '매일 30분씩 걷고',
+        '우유 사는 것을 기억해줘',
+      ]);
+    });
+
+    test('일정 + 목표 + 메모 3개 절로 나뉜다(대표 예시)', () {
+      final clauses = splitter.splitClauses(
+        '내일 오후 3시에 병원에 가고 매일 30분씩 걷고 우유 사는 것을 메모해줘',
+      );
+      expect(clauses, ['내일 오후 3시에 병원에 가고', '매일 30분씩 걷고', '우유 사는 것을 메모해줘']);
+    });
+
+    test('반복 신호 없이 일정 + 메모 두 절만 있어도 나뉜다', () {
+      final clauses = splitter.splitClauses(
+        '다음 주 월요일 오전 10시에 은행에 가고 책을 매일 20분 읽고 계란 사는 것 적어줘',
+      );
+      expect(clauses, [
+        '다음 주 월요일 오전 10시에 은행에 가고',
+        '책을 매일 20분 읽고',
+        '계란 사는 것 적어줘',
+      ]);
+    });
+
+    test('메모 요청 표현만 있고 앞에 다른 절이 없으면 나누지 않는다', () {
+      expect(splitter.splitClauses('우유 사는 것을 메모해줘'), ['우유 사는 것을 메모해줘']);
+    });
   });
 
   group('빈 절 방지', () {

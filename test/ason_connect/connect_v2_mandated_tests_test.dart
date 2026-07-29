@@ -113,7 +113,8 @@ void main() {
 
     expect(find.text('일정'), findsOneWidget);
     expect(find.text('나의 하루 목표'), findsOneWidget);
-    expect(find.text('광고미팅'), findsOneWidget);
+    // "-고" 연결형이 자연스러운 "-기" 종결형으로 정리됩니다.
+    expect(find.text('광고미팅하기'), findsOneWidget);
     expect(find.text('1시간 전'), findsOneWidget);
     expect(find.text('스트레칭'), findsOneWidget);
     expect(find.text('매일 아침'), findsOneWidget);

@@ -7,6 +7,7 @@ import '../../ason_connect/services/command_parser_service.dart';
 import '../../ason_connect/services/daily_goal_field_extractor.dart';
 import '../../ason_connect/services/memo_classifier.dart';
 import '../../ason_connect/services/project_field_extractor.dart';
+import '../../ason_connect/services/title_normalizer.dart';
 import '../models/entity_result.dart';
 import '../services/entity_analyzer.dart';
 
@@ -39,8 +40,13 @@ class RuleBasedEntityAnalyzer implements EntityAnalyzer {
         );
       case DraftCommandCategory.memo:
         final isFiller = MemoClassifier.isGenericFiller(text);
+        final memoTitle = isFiller
+            ? null
+            : TitleNormalizer.normalizeMemoRequest(
+                _parser.normalizeMemoContent(text),
+              );
         return EntityResult(
-          title: isFiller ? null : _parser.normalizeMemoContent(text),
+          title: memoTitle,
           memoType: MemoClassifier.classify(text),
         );
       case DraftCommandCategory.todo:
