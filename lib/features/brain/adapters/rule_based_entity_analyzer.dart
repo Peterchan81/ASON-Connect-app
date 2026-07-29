@@ -55,7 +55,10 @@ class RuleBasedEntityAnalyzer implements EntityAnalyzer {
         );
       case DraftCommandCategory.dailyGoal:
         final repeat = DailyGoalFieldExtractor.extractRepeat(text);
-        final title = DailyGoalFieldExtractor.extractTitle(text, repeat: repeat);
+        final title = DailyGoalFieldExtractor.extractTitle(
+          text,
+          repeat: repeat,
+        );
         return EntityResult(
           title: title.isEmpty ? null : title,
           repeatOption: repeat,

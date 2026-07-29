@@ -7,7 +7,11 @@
 import 'draft_command.dart';
 
 class ConnectItem {
-  const ConnectItem({required this.draft, this.pendingQuestion, this.syncError});
+  const ConnectItem({
+    required this.draft,
+    this.pendingQuestion,
+    this.syncError,
+  });
 
   final DraftCommand draft;
 

@@ -88,9 +88,9 @@ class _LoginScreenState extends State<LoginScreen> {
   // 회원가입이 끝나면 SignupScreen이 로그인 화면으로 돌아오지 않고, 자동
   // 로그인 후 곧바로 Connect 입력 화면으로 이동합니다(전체 스택 교체).
   void _openSignup() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SignupScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const SignupScreen()));
   }
 
   @override
@@ -174,7 +174,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               value: _autoLogin,
                               activeColor: AsonColors.primary,
                               side: BorderSide(
-                                color: AsonColors.primary.withValues(alpha: 0.6),
+                                color: AsonColors.primary.withValues(
+                                  alpha: 0.6,
+                                ),
                               ),
                               onChanged: (value) =>
                                   setState(() => _autoLogin = value ?? false),
@@ -264,7 +266,10 @@ class _BottomMenuDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('|', style: TextStyle(color: Colors.white.withValues(alpha: 0.2)));
+    return Text(
+      '|',
+      style: TextStyle(color: Colors.white.withValues(alpha: 0.2)),
+    );
   }
 }
 
@@ -288,7 +293,10 @@ class _InlineBanner extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.85)),
+        style: TextStyle(
+          fontSize: 12.5,
+          color: Colors.white.withValues(alpha: 0.85),
+        ),
       ),
     );
   }

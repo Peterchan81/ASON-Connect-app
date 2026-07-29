@@ -380,7 +380,10 @@ class _TermsSection extends StatelessWidget {
               onChanged: onAllAgreeChanged,
               title: const Text(
                 '전체 동의',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
             Divider(height: 1, color: Colors.white.withValues(alpha: 0.12)),

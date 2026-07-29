@@ -149,6 +149,40 @@ class DraftCommand {
   /// 이 내용을 마지막으로 고친 시각입니다. copyWith할 때마다 새로 갱신됩니다.
   final DateTime updatedAt;
 
+  /// 이 카드가 동기화할 수 있을 만큼 핵심 내용을 갖추었는지 여부입니다.
+  /// 날짜/시간/장소/알림/반복은 필수가 아닙니다 — ASON Connect는 입력 폼이
+  /// 아니므로 이런 값이 빠졌다고 동기화를 막지 않습니다. 다만 카드의 핵심
+  /// 내용(대부분 title)까지 비어 있으면 저장할 것이 없으므로 동기화만 막고,
+  /// 카드 자체는 그대로 보여줍니다(추가 질문을 만들지 않습니다).
+  bool get hasRequiredContent {
+    switch (category) {
+      case DraftCommandCategory.schedule:
+      case DraftCommandCategory.dailyGoal:
+      case DraftCommandCategory.diary:
+      case DraftCommandCategory.memo:
+        return _hasContent(title);
+      case DraftCommandCategory.health:
+      case DraftCommandCategory.project:
+      case DraftCommandCategory.todo:
+      case null:
+        // 검증 대상이 아닌 카테고리(내부 하위 호환용)는 기존 동작을 그대로 둡니다.
+        return true;
+    }
+  }
+
+  /// [hasRequiredContent]가 false일 때 카드에 보여줄 안내 문구입니다.
+  /// 질문이 아니라 정적인 안내이며, 채팅 메시지를 만들지 않습니다.
+  String? get validationMessage =>
+      hasRequiredContent ? null : '내용을 입력하거나 수정해 주세요.';
+
+  static bool _hasContent(String? value) {
+    if (value == null) return false;
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return false;
+    if (trimmed == '-') return false;
+    return true;
+  }
+
   /// 일부 값만 바꾼 새로운 DraftCommand를 만듭니다. updatedAt은 항상 지금 시각으로 갱신됩니다.
   DraftCommand copyWith({
     DraftCommandStatus? status,

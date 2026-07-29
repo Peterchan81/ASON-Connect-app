@@ -102,9 +102,10 @@ class AuthService {
 
   String _newSessionId() {
     final random = Random.secure();
-    return List<int>.generate(16, (_) => random.nextInt(256))
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
+    return List<int>.generate(
+      16,
+      (_) => random.nextInt(256),
+    ).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
 
   Future<List<AsonAccount>> _loadAccounts() async {
@@ -196,7 +197,10 @@ class AuthService {
     final nickname = prefs.getString(_kNickname);
     final sessionId = prefs.getString(_kSessionId);
 
-    if (!isLoggedIn || !autoLoginEnabled || userId == null || sessionId == null) {
+    if (!isLoggedIn ||
+        !autoLoginEnabled ||
+        userId == null ||
+        sessionId == null) {
       return const AutoLoginResult.none();
     }
 

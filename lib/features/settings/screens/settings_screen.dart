@@ -114,9 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: isLight
             ? AsonColors.lightSurface
             : AsonColors.surfaceNavy,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           '로그아웃',
           style: TextStyle(color: AsonColors.onBackground(context)),
@@ -227,10 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-              GlowButton(
-                label: '로그아웃',
-                onPressed: _handleLogoutPressed,
-              ),
+              GlowButton(label: '로그아웃', onPressed: _handleLogoutPressed),
             ],
           ),
         ),

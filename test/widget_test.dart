@@ -314,10 +314,7 @@ void main() {
   ) async {
     await _startConnect(tester);
 
-    await _sendText(
-      tester,
-      '내일 영동에서 3시 광고미팅, 한 시간 전에 알려주고, 매일 아침 스트레칭하기.',
-    );
+    await _sendText(tester, '내일 영동에서 3시 광고미팅, 한 시간 전에 알려주고, 매일 아침 스트레칭하기.');
 
     // 하나의 일정으로 통째로 저장되지 않고, 일정/나의 하루 목표 두 개의 카드로 나뉩니다.
     expect(find.text('일정'), findsOneWidget);

@@ -50,15 +50,7 @@ class ClassificationScorer {
       '방문',
       '예약',
     ],
-    DraftCommandCategory.memo: [
-      '메모',
-      '기억',
-      '적어',
-      '기록',
-      '사야',
-      '구매',
-      '아이디어',
-    ],
+    DraftCommandCategory.memo: ['메모', '기억', '적어', '기록', '사야', '구매', '아이디어'],
     DraftCommandCategory.health: [
       '몸무게',
       '체중',

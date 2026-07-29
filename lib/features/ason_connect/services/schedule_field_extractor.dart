@@ -45,16 +45,12 @@ class ScheduleFieldExtractor {
 
   // 분류 키워드 하나만 남고 실질적인 내용이 없는 경우입니다. (예: "미팅"만 남음)
   // "광고미팅"처럼 키워드가 다른 단어의 일부이면 실질적인 내용으로 봅니다.
-  static final RegExp _bareCategoryWord = RegExp(
-    r'^(일정|약속|미팅|회의|모임|출장|방문)$',
-  );
+  static final RegExp _bareCategoryWord = RegExp(r'^(일정|약속|미팅|회의|모임|출장|방문)$');
 
   // "있어/있다/이야"처럼 존재만 나타내는 표현입니다. 실제 내용 뒤에 붙어도
   // ("광고미팅 있어") 내용 자체는 유효하므로, 이 부분만 떼어내고 나머지를
   // 내용으로 씁니다.
-  static final RegExp _existentialFillerSuffix = RegExp(
-    r'\s*(있어|있다|있음|이야|야)$',
-  );
+  static final RegExp _existentialFillerSuffix = RegExp(r'\s*(있어|있다|있음|이야|야)$');
 
   // "광고미팅하고"처럼, 다음 절로 이어지는 연결 어미가 내용 끝에 남아 있으면
   // 떼어냅니다. (여러 의도로 나뉘기 전 원문을 그대로 분석할 때 남을 수 있음)

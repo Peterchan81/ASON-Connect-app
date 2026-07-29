@@ -109,10 +109,7 @@ void main() {
   ) async {
     await _startConnect(tester);
 
-    await _sendText(
-      tester,
-      '내일 오후 3시 광고미팅하고 한 시간 전에 알려주고 매일 아침 스트레칭하기.',
-    );
+    await _sendText(tester, '내일 오후 3시 광고미팅하고 한 시간 전에 알려주고 매일 아침 스트레칭하기.');
 
     expect(find.text('일정'), findsOneWidget);
     expect(find.text('나의 하루 목표'), findsOneWidget);
@@ -148,9 +145,7 @@ void main() {
   // ASON Connect는 입력 폼이 아닙니다: 시간처럼 부족한 항목이 있어도 "몇 시인가요?"
   // 처럼 하나씩 되묻지 않고, 곧바로 결과 카드를 보여줍니다. 빈 항목은 카드에
   // 빈 채로 표시되고, 사용자가 수정 버튼으로 채웁니다.
-  testWidgets('테스트 6: 날짜만 있고 시간이 없는 일정도 되묻지 않고 곧바로 결과 카드가 보인다', (
-    tester,
-  ) async {
+  testWidgets('테스트 6: 날짜만 있고 시간이 없는 일정도 되묻지 않고 곧바로 결과 카드가 보인다', (tester) async {
     await _startConnect(tester);
 
     await _sendText(tester, '내일 광고미팅 있어.');

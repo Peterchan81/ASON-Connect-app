@@ -40,9 +40,7 @@ void main() {
     );
   });
 
-  testWidgets('계정 정보에 아이디/이메일이 읽기 전용으로 표시되고, 닉네임만 저장할 수 있다', (
-    tester,
-  ) async {
+  testWidgets('계정 정보에 아이디/이메일이 읽기 전용으로 표시되고, 닉네임만 저장할 수 있다', (tester) async {
     _usePhoneViewport(tester);
     await tester.pumpWidget(const MaterialApp(home: SettingsScreen()));
     await _settle(tester);

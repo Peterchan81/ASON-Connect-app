@@ -48,9 +48,7 @@ Future<void> _startConnect(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('전송하기 전에도 입력창 바로 위에 실시간 미리보기가 컴팩트하게 나타난다', (
-    tester,
-  ) async {
+  testWidgets('전송하기 전에도 입력창 바로 위에 실시간 미리보기가 컴팩트하게 나타난다', (tester) async {
     await _startConnect(tester);
 
     await tester.enterText(find.byType(TextField), '내일 오후 3시 영동에서 광고미팅');

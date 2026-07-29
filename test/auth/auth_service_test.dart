@@ -11,9 +11,17 @@ void main() {
     AuthService.instance.resetForTest();
   });
 
-  Future<void> registerTestUser({String id = 'tester', String password = 'pw1234'}) {
+  Future<void> registerTestUser({
+    String id = 'tester',
+    String password = 'pw1234',
+  }) {
     return AuthService.instance
-        .register(nickname: '테스터', id: id, email: 'tester@ason.app', password: password)
+        .register(
+          nickname: '테스터',
+          id: id,
+          email: 'tester@ason.app',
+          password: password,
+        )
         .then((_) {});
   }
 

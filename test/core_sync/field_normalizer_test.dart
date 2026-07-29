@@ -34,9 +34,18 @@ void main() {
       final today = DateTime(now.year, now.month, now.day);
 
       expect(FieldNormalizer.resolveDate('오늘'), today);
-      expect(FieldNormalizer.resolveDate('내일'), today.add(const Duration(days: 1)));
-      expect(FieldNormalizer.resolveDate('모레'), today.add(const Duration(days: 2)));
-      expect(FieldNormalizer.resolveDate('어제'), today.subtract(const Duration(days: 1)));
+      expect(
+        FieldNormalizer.resolveDate('내일'),
+        today.add(const Duration(days: 1)),
+      );
+      expect(
+        FieldNormalizer.resolveDate('모레'),
+        today.add(const Duration(days: 2)),
+      );
+      expect(
+        FieldNormalizer.resolveDate('어제'),
+        today.subtract(const Duration(days: 1)),
+      );
     });
 
     test('"8월 15일" 형식을 실제 날짜 모델로 변환한다', () {

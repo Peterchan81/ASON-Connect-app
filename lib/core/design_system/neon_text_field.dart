@@ -103,7 +103,9 @@ class _NeonTextFieldState extends State<NeonTextField> {
           child: TextField(
             controller: widget.controller,
             focusNode: _focusNode,
-            obscureText: widget.showObscureToggle ? _obscure : widget.obscureText,
+            obscureText: widget.showObscureToggle
+                ? _obscure
+                : widget.obscureText,
             keyboardType: widget.keyboardType,
             textInputAction: widget.textInputAction,
             onChanged: widget.onChanged,

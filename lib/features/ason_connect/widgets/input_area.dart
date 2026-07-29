@@ -104,7 +104,9 @@ class InputArea extends StatelessWidget {
               if (items.isNotEmpty) ...[
                 for (var i = 0; i < items.length; i++) ...[
                   SchedulePreviewPanel(
-                    key: ValueKey('item-panel-$i-${items[i].draft.createdAt.microsecondsSinceEpoch}'),
+                    key: ValueKey(
+                      'item-panel-$i-${items[i].draft.createdAt.microsecondsSinceEpoch}',
+                    ),
                     draft: items[i].draft,
                     isPreviewOnly: false,
                     pendingQuestion: items[i].pendingQuestion,
@@ -115,10 +117,7 @@ class InputArea extends StatelessWidget {
                   const SizedBox(height: 8),
                 ],
                 if (allItemsReady) ...[
-                  GlowButton(
-                    label: '모두 ASON에 동기화',
-                    onPressed: onSyncAll,
-                  ),
+                  GlowButton(label: '모두 ASON에 동기화', onPressed: onSyncAll),
                   const SizedBox(height: 10),
                 ],
               ] else if (panelDraft != null) ...[

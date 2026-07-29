@@ -5,6 +5,13 @@
 //
 // 일정은 추가로, 같은 날짜/시간/제목을 가진 "다른" 항목이 이미 있으면(완전히
 // 동일한 일정을 실수로 두 번 만든 경우) 저장을 막고 duplicate 결과를 돌려줍니다.
+//
+// 역할 범위(중요): 여기서 말하는 "동기화"는 기기 안 SharedPreferences에 ASON-Core와
+// 동일한 키·JSON 구조로 값을 써 두는 로컬 저장 단계입니다. ASON Connect와 ASON-Core는
+// 서로 다른 앱(별도 프로세스/샌드박스)이라 이 클래스가 두 앱을 실시간으로 잇는 실제
+// 앱 간 동기화 수단은 아닙니다 — 지금은 데이터 형태를 미리 맞춰 두는 로컬 임시
+// 저장·형식 검증 단계이며, 두 앱이 실제로 데이터를 주고받으려면 이후 Supabase 등
+// 서버 기반 동기화로 교체될 예정입니다.
 
 import '../../ason_connect/models/draft_command.dart';
 import '../models/health_entry.dart';
@@ -81,6 +88,12 @@ class CoreSyncMapper {
     final category = draft.category;
     if (category == null) {
       return const CoreSyncResult.failure('분류되지 않은 내용은 동기화할 수 없습니다.');
+    }
+    // UI(SchedulePreviewPanel)가 이미 동기화 버튼을 비활성화하지만, 이 검증에만
+    // 기대지 않고 저장 직전에 한 번 더 막습니다. 여기서 걸리면 아무 것도 쓰지
+    // 않고(placeholder "-"로도 대신 채우지 않고) 실패로 돌려줍니다.
+    if (!draft.hasRequiredContent) {
+      return const CoreSyncResult.failure('내용이 없어 동기화할 수 없습니다.');
     }
     final id = idFor(draft);
 
@@ -186,5 +199,4 @@ class CoreSyncMapper {
       updatedAt: draft.updatedAt,
     );
   }
-
 }

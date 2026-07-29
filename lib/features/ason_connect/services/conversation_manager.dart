@@ -229,7 +229,10 @@ class ConversationManager {
       // 분류할 수 없는 절은 억지로 항목을 만들지 않고 건너뜁니다.
       if (draft == null) continue;
       _items.add(
-        ConnectItem(draft: draft, pendingQuestion: _questionFrom(result, draft)),
+        ConnectItem(
+          draft: draft,
+          pendingQuestion: _questionFrom(result, draft),
+        ),
       );
     }
   }
@@ -270,33 +273,24 @@ class ConversationManager {
 
   /// [index] 항목의 실제 동기화를 수행합니다. 성공하면 목록에서 사라지고
   /// (=화면에서 자동으로 정리됨), 실패하면 그 항목에 실패 이유를 남깁니다.
+  /// 단일 카드(finishSync)와 완전히 같은 동기화 절차([_syncDraft])를 거칩니다.
   Future<bool> finishSyncItem(int index) async {
     if (index < 0 || index >= _items.length) return false;
     final item = _items[index];
     if (item.draft.status != DraftCommandStatus.syncing) return false;
 
-    try {
-      final result = await _coreSyncMapper.sync(item.draft);
-      if (result.isSuccess) {
-        if (index < _items.length) _items.removeAt(index);
-        return true;
-      }
-      if (index < _items.length) {
-        _items[index] = item.copyWith(
-          draft: item.draft.copyWith(status: DraftCommandStatus.ready),
-          syncError: result.errorMessage ?? '동기화 중 오류가 발생했습니다.',
-        );
-      }
-      return false;
-    } catch (_) {
-      if (index < _items.length) {
-        _items[index] = item.copyWith(
-          draft: item.draft.copyWith(status: DraftCommandStatus.ready),
-          syncError: '동기화 중 오류가 발생했습니다.',
-        );
-      }
-      return false;
+    final outcome = await _syncDraft(item.draft);
+    if (outcome.isSuccess) {
+      if (index < _items.length) _items.removeAt(index);
+      return true;
     }
+    if (index < _items.length) {
+      _items[index] = item.copyWith(
+        draft: item.draft.copyWith(status: DraftCommandStatus.ready),
+        syncError: outcome.errorMessage ?? '동기화 중 오류가 발생했습니다.',
+      );
+    }
+    return false;
   }
 
   /// 준비된 모든 항목을 순서대로 동기화합니다. 실패한 항목은 목록에 남고,
@@ -324,7 +318,11 @@ class ConversationManager {
     if (rawText.isEmpty) return _draft;
 
     final result = _brain.process(
-      BrainInput(text: rawText, draft: _draft, inputSource: InputSource.unknown),
+      BrainInput(
+        text: rawText,
+        draft: _draft,
+        inputSource: InputSource.unknown,
+      ),
     );
     return result.draft;
   }
@@ -378,47 +376,66 @@ class ConversationManager {
   }
 
   /// 실제 가상 동기화를 수행합니다. (비동기 처리 부분)
+  /// 다중 카드(finishSyncItem)와 완전히 같은 동기화 절차([_syncDraft])를 거칩니다.
   Future<void> finishSync() async {
     final draft = _draft;
     if (draft == null || draft.status != DraftCommandStatus.syncing) return;
 
     _lastSyncError = null;
-    final payload = _summaryBuilder.payload(draft);
-    final result = await _syncService.sync(payload);
+    final outcome = await _syncDraft(draft);
 
-    if (result.isSuccess) {
-      try {
-        // ASON-Core와 같은 저장 구조(SharedPreferences)에 실제로 반영합니다.
-        // 같은 draft(같은 createdAt)를 다시 동기화하면 같은 id로 덮어써서
-        // 중복 저장되지 않습니다. 완전히 동일한(다른 id의) 일정이 이미 있으면
-        // duplicate로 거부됩니다.
-        final coreResult = await _coreSyncMapper.sync(draft);
-        if (!coreResult.isSuccess) {
-          _lastSyncError = coreResult.errorMessage;
-          _draft = draft.copyWith(status: DraftCommandStatus.ready);
-          _addAson(
-            coreResult.errorMessage ?? '동기화 중 오류가 발생했습니다.',
-            type: ChatMessageType.error,
-          );
-          return;
-        }
-        _draft = draft.copyWith(status: DraftCommandStatus.synced);
-        _addAson(
-          'ASON Core에 동기화할 준비가 완료되었습니다.',
-          type: ChatMessageType.syncComplete,
-        );
-      } catch (_) {
-        _lastSyncError = '동기화 중 오류가 발생했습니다.';
-        _draft = draft.copyWith(status: DraftCommandStatus.ready);
-        _addAson('동기화 중 오류가 발생했습니다.', type: ChatMessageType.error);
-      }
+    if (outcome.isSuccess) {
+      _draft = draft.copyWith(status: DraftCommandStatus.synced);
+      _addAson(
+        'ASON Core에 동기화할 준비가 완료되었습니다.',
+        type: ChatMessageType.syncComplete,
+      );
     } else {
-      _lastSyncError = result.errorMessage ?? '동기화 중 오류가 발생했습니다.';
+      _lastSyncError = outcome.errorMessage;
       _draft = draft.copyWith(status: DraftCommandStatus.ready);
       _addAson(
-        result.errorMessage ?? '동기화 중 오류가 발생했습니다.',
+        outcome.errorMessage ?? '동기화 중 오류가 발생했습니다.',
         type: ChatMessageType.error,
       );
+    }
+  }
+
+  /// 단일 카드([finishSync])와 다중 카드([finishSyncItem])가 공통으로 거치는
+  /// 동기화 절차입니다. 두 경로가 서로 다른 정책을 쓰지 않도록 이 메서드
+  /// 하나로 통일합니다.
+  ///
+  /// 순서: ① 내용 유효성 검사(비어 있으면 MockSyncService/CoreSyncMapper를
+  /// 아예 호출하지 않고 곧바로 실패) → ② MockSyncService(가상 사전 처리) →
+  /// ③ CoreSyncMapper(ASON-Core와 같은 구조로 로컬 저장).
+  Future<_SyncOutcome> _syncDraft(DraftCommand draft) async {
+    if (!draft.hasRequiredContent) {
+      return _SyncOutcome.failure(
+        draft.validationMessage ?? '내용이 없어 동기화할 수 없습니다.',
+      );
+    }
+
+    final payload = _summaryBuilder.payload(draft);
+    final mockResult = await _syncService.sync(payload);
+    if (!mockResult.isSuccess) {
+      return _SyncOutcome.failure(
+        mockResult.errorMessage ?? '동기화 중 오류가 발생했습니다.',
+      );
+    }
+
+    try {
+      // ASON-Core와 같은 저장 구조(SharedPreferences)에 실제로 반영합니다.
+      // 같은 draft(같은 createdAt)를 다시 동기화하면 같은 id로 덮어써서
+      // 중복 저장되지 않습니다. 완전히 동일한(다른 id의) 일정이 이미 있으면
+      // duplicate로 거부됩니다.
+      final coreResult = await _coreSyncMapper.sync(draft);
+      if (!coreResult.isSuccess) {
+        return _SyncOutcome.failure(
+          coreResult.errorMessage ?? '동기화 중 오류가 발생했습니다.',
+        );
+      }
+      return const _SyncOutcome.success();
+    } catch (_) {
+      return const _SyncOutcome.failure('동기화 중 오류가 발생했습니다.');
     }
   }
 
@@ -459,4 +476,16 @@ class ConversationManager {
     _seq += 1;
     return '${DateTime.now().microsecondsSinceEpoch}_$_seq';
   }
+}
+
+/// [ConversationManager._syncDraft]의 결과입니다. 단일/다중 카드가 이 결과
+/// 하나를 똑같이 해석해서 각자의 화면 상태(메시지 또는 syncError)로 옮깁니다.
+class _SyncOutcome {
+  const _SyncOutcome.success() : isSuccess = true, errorMessage = null;
+  const _SyncOutcome.failure(String message)
+    : isSuccess = false,
+      errorMessage = message;
+
+  final bool isSuccess;
+  final String? errorMessage;
 }

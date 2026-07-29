@@ -30,10 +30,7 @@ void main() {
 
     expect(second.currentDraft?.status, DraftCommandStatus.ready);
     expect(second.lastSyncError, '이미 동일한 일정이 있습니다.');
-    expect(
-      second.messages.last.text,
-      '이미 동일한 일정이 있습니다.',
-    );
+    expect(second.messages.last.text, '이미 동일한 일정이 있습니다.');
   });
 
   test('previewDraft는 실제 draft나 채팅 이력을 전혀 바꾸지 않는 순수 미리보기다', () {

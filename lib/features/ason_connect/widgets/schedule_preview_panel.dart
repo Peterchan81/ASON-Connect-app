@@ -234,6 +234,14 @@ class SchedulePreviewPanel extends StatelessWidget {
                 style: TextStyle(fontSize: 11.5, color: AsonColors.error),
               ),
             ),
+          if (canEditOrSync && draft.validationMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                draft.validationMessage!,
+                style: TextStyle(fontSize: 11.5, color: AsonColors.error),
+              ),
+            ),
           if (isPreviewOnly)
             Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -260,7 +268,7 @@ class SchedulePreviewPanel extends StatelessWidget {
                   child: GlowButton(
                     label: 'ASON에 동기화',
                     isLoading: state == SchedulePanelState.syncing,
-                    onPressed: onSync,
+                    onPressed: draft.hasRequiredContent ? onSync : null,
                   ),
                 ),
               ],

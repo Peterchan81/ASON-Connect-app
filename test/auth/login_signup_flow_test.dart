@@ -30,9 +30,7 @@ void main() {
     AuthService.instance.resetForTest();
   });
 
-  testWidgets('빈 값으로 로그인을 누르면 화면 안에 오류가 표시되고 로그인 화면에 그대로 머문다', (
-    tester,
-  ) async {
+  testWidgets('빈 값으로 로그인을 누르면 화면 안에 오류가 표시되고 로그인 화면에 그대로 머문다', (tester) async {
     _usePhoneViewport(tester);
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
     await _settle(tester);
@@ -81,13 +79,13 @@ void main() {
     expect(find.byType(AsonConnectScreen), findsOneWidget);
     expect(find.byType(LoginScreen), findsNothing);
 
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
+    final navigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
     expect(navigator.canPop(), isFalse);
   });
 
-  testWidgets('회원가입 화면에서 비밀번호 확인이 다르면 오류가 표시되고 가입되지 않는다', (
-    tester,
-  ) async {
+  testWidgets('회원가입 화면에서 비밀번호 확인이 다르면 오류가 표시되고 가입되지 않는다', (tester) async {
     _usePhoneViewport(tester);
     await tester.pumpWidget(const MaterialApp(home: SignupScreen()));
     await _settle(tester);
@@ -152,7 +150,9 @@ void main() {
     expect(AuthService.instance.autoLoginEnabled, isTrue);
 
     // 뒤로 가기로 회원가입/로그인 화면에 돌아갈 수 없습니다.
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
+    final navigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
     expect(navigator.canPop(), isFalse);
   });
 
@@ -176,7 +176,9 @@ void main() {
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.byType(AsonConnectScreen), findsNothing);
 
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
+    final navigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
     expect(navigator.canPop(), isFalse);
   });
 }
