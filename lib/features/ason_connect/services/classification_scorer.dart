@@ -4,6 +4,7 @@
 
 import 'date_expression_parser.dart';
 import 'korean_location_service.dart';
+import 'untimed_schedule_classifier.dart';
 import '../models/draft_command.dart';
 
 /// classify()의 결과입니다. 가장 유력한 카테고리와 그다음으로 유력한 카테고리,
@@ -36,11 +37,15 @@ class ClassificationScorer {
   ClassificationScorer({
     KoreanLocationService? locationService,
     DateExpressionParser? dateExpressionParser,
+    UntimedScheduleClassifier? untimedScheduleClassifier,
   }) : _locationService = locationService ?? KoreanLocationService(),
-       _dateExpressionParser = dateExpressionParser ?? DateExpressionParser();
+       _dateExpressionParser = dateExpressionParser ?? DateExpressionParser(),
+       _untimedScheduleClassifier =
+           untimedScheduleClassifier ?? const UntimedScheduleClassifier();
 
   final KoreanLocationService _locationService;
   final DateExpressionParser _dateExpressionParser;
+  final UntimedScheduleClassifier _untimedScheduleClassifier;
 
   // 분류에 사용하는 키워드입니다. 문장 형태(시간/장소/수치 패턴)와 함께 점수로 반영합니다.
   static const Map<DraftCommandCategory, List<String>> _keywords = {
@@ -95,9 +100,10 @@ class ClassificationScorer {
     ],
   };
 
-  // 나의 하루 목표의 핵심 신호인 "반복" 표현입니다. (매일/매주 등)
+  // 나의 하루 목표의 핵심 신호인 "반복/습관" 표현입니다. (매일/매주/꾸준히/습관 등)
   static final RegExp _repeatCuePattern = RegExp(
-    r'매일\s*아침|매일\s*저녁|매일\s*밤|매주\s*[가-힣]+요일|매일|매주|매달',
+    r'매일\s*아침|매일\s*저녁|매일\s*밤|매주\s*[가-힣]+요일|'
+    r'매일|매주|매달|꾸준히|습관|계속|하루에',
   );
 
   // 다이어리의 핵심 신호인, 하루를 돌아보는 과거형 감정 표현입니다.
@@ -178,6 +184,10 @@ class ClassificationScorer {
         // 되는 것은 아니고(다른 카테고리 점수와 합산해서 비교), "다음
         // 주부터"처럼 요일/일자가 없는 막연한 표현은 매칭되지 않습니다.
         if (_dateExpressionParser.extract(text) != null) score += 2;
+        // "병원 가야 해"/"세차 맡기기"처럼 시각·날짜 표현이 없어도, 한 번
+        // 처리하면 끝나는 용무성 행동이면 일정 신호로 봅니다(반복/과거감정/
+        // 희망 표현이 있으면 0점이라 다른 카테고리를 밀어내지 않습니다).
+        score += _untimedScheduleClassifier.scoreBonus(text);
         break;
       case DraftCommandCategory.health:
         if (_weightPattern.hasMatch(text) ||
