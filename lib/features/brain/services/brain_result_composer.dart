@@ -23,21 +23,11 @@ class BrainResultComposer {
     EntityResult? entities,
     bool isUncertain = false,
   }) {
-    // 부족한 필드는 "일정을 한창 수집 중"일 때만 의미가 있습니다. 그 외 카테고리는
-    // 후속 질문 흐름 자체가 없으므로 항상 빈 목록입니다.
-    final missing =
-        (draft != null &&
-            draft.category == DraftCommandCategory.schedule &&
-            draft.status == DraftCommandStatus.collecting)
-        ? context.missingFieldAnalyzer.missingFields(draft)
-        : const <String>[];
-
     return BrainResult(
       draft: draft,
       messages: messages,
       intent: intent,
       entities: entities,
-      missingFields: missing,
       summaryReady: context.summaryBuilder.isReady(draft),
       syncReady: context.syncBuilder.isReady(draft),
       isUncertain: isUncertain,

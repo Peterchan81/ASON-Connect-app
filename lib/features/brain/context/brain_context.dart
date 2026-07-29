@@ -11,16 +11,12 @@ import '../services/brain_summary_builder.dart';
 import '../services/brain_sync_builder.dart';
 import '../services/entity_analyzer.dart';
 import '../services/intent_analyzer.dart';
-import '../services/missing_field_analyzer.dart';
-import '../services/question_planner.dart';
 
 class BrainContext {
   const BrainContext({
     required this.input,
     required this.intentAnalyzer,
     required this.entityAnalyzer,
-    required this.missingFieldAnalyzer,
-    required this.questionPlanner,
     required this.summaryBuilder,
     required this.syncBuilder,
     required this.heuristics,
@@ -31,8 +27,6 @@ class BrainContext {
   final BrainInput input;
   final IntentAnalyzer intentAnalyzer;
   final EntityAnalyzer entityAnalyzer;
-  final MissingFieldAnalyzer missingFieldAnalyzer;
-  final QuestionPlanner questionPlanner;
   final BrainSummaryBuilder summaryBuilder;
   final BrainSyncBuilder syncBuilder;
   final ConversationHeuristics heuristics;

@@ -14,7 +14,6 @@ import '../ason_connect/models/chat_message.dart' show ChatMessageType;
 import '../ason_connect/services/command_parser_service.dart';
 import '../ason_connect/services/conversation_heuristics.dart';
 import '../ason_connect/services/korean_location_service.dart';
-import '../ason_connect/services/schedule_question_flow.dart';
 import 'adapters/rule_based_entity_analyzer.dart';
 import 'adapters/rule_based_intent_analyzer.dart';
 import 'context/brain_context.dart';
@@ -31,8 +30,6 @@ import 'services/brain_summary_builder.dart';
 import 'services/brain_sync_builder.dart';
 import 'services/entity_analyzer.dart';
 import 'services/intent_analyzer.dart';
-import 'services/missing_field_analyzer.dart';
-import 'services/question_planner.dart';
 
 class BrainEngine {
   factory BrainEngine({
@@ -40,8 +37,6 @@ class BrainEngine {
     KoreanLocationService? locationService,
     IntentAnalyzer? intentAnalyzer,
     EntityAnalyzer? entityAnalyzer,
-    MissingFieldAnalyzer? missingFieldAnalyzer,
-    QuestionPlanner? questionPlanner,
     ConversationHeuristics? heuristics,
     List<BrainTurnHandler>? handlers,
   }) {
@@ -49,19 +44,10 @@ class BrainEngine {
     final resolvedParser =
         parser ??
         CommandParserService(locationService: resolvedLocationService);
-    final resolvedQuestionFlow = ScheduleQuestionFlow(parser: resolvedParser);
 
     return BrainEngine._(
       intentAnalyzer: intentAnalyzer ?? RuleBasedIntentAnalyzer(resolvedParser),
       entityAnalyzer: entityAnalyzer ?? RuleBasedEntityAnalyzer(resolvedParser),
-      missingFieldAnalyzer:
-          missingFieldAnalyzer ?? RuleBasedMissingFieldAnalyzer(resolvedParser),
-      questionPlanner:
-          questionPlanner ??
-          RuleBasedQuestionPlanner(
-            parser: resolvedParser,
-            questionFlow: resolvedQuestionFlow,
-          ),
       heuristics: heuristics ?? ConversationHeuristics(),
       parser: resolvedParser,
       locationService: resolvedLocationService,
@@ -84,8 +70,6 @@ class BrainEngine {
   BrainEngine._({
     required this._intentAnalyzer,
     required this._entityAnalyzer,
-    required this._missingFieldAnalyzer,
-    required this._questionPlanner,
     required this._heuristics,
     required this._parser,
     required this._locationService,
@@ -94,8 +78,6 @@ class BrainEngine {
 
   final IntentAnalyzer _intentAnalyzer;
   final EntityAnalyzer _entityAnalyzer;
-  final MissingFieldAnalyzer _missingFieldAnalyzer;
-  final QuestionPlanner _questionPlanner;
   final ConversationHeuristics _heuristics;
   final CommandParserService _parser;
   final KoreanLocationService _locationService;
@@ -110,8 +92,6 @@ class BrainEngine {
       input: input,
       intentAnalyzer: _intentAnalyzer,
       entityAnalyzer: _entityAnalyzer,
-      missingFieldAnalyzer: _missingFieldAnalyzer,
-      questionPlanner: _questionPlanner,
       summaryBuilder: _summaryBuilder,
       syncBuilder: _syncBuilder,
       heuristics: _heuristics,
