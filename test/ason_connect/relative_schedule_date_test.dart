@@ -33,18 +33,13 @@ void main() {
       expect(result.title, '병원 방문하기');
     });
 
-    // 참고(이번 턴과 무관한 기존 버그): KoreanLocationService의 행정구역 접미사
-    // 정규식이 "친구"를 "친"+"구"(예: 중구처럼 1글자 지명)로 오인해 확실한
-    // 장소로 잘못 인식합니다. 그 결과 "친구"가 제목에서 장소로 빠져나가
-    // "만나기"만 남습니다. 이번 턴의 날짜 추출 자체는 정상 동작함을
-    // DateExpressionParser 테스트로 별도 확인했고(matchedText가 "금요일에"로
-    // 정확히 끝남), 장소 추출 규칙은 이번 턴의 변경 대상이 아니라서 고치지
-    // 않았습니다. 완료 보고서의 "남은 문제"에도 함께 남깁니다.
-    test('금요일에 친구 만나기 -> 날짜는 정확하지만, 기존 장소 오인식 버그로 제목에서 "친구"가 빠진다', () {
+    // "친구"는 장소 오인식 방지(ASON Engine 자연어 이해 2단계)로 더 이상
+    // 장소로 인식되지 않아, 날짜만 정확히 빠지고 "친구"는 제목에 남습니다.
+    test('금요일에 친구 만나기 -> 날짜만 정확히 빠지고 "친구"는 제목에 남는다', () {
       final result = parser.extractScheduleFields('금요일에 친구 만나기');
       expect(result.date, '2026-07-31');
-      expect(result.location, '친구');
-      expect(result.title, '만나기');
+      expect(result.location, isNull);
+      expect(result.title, '친구 만나기');
     });
   });
 

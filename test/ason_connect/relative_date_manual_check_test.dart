@@ -46,15 +46,14 @@ void main() {
     expect(manager.currentDraft?.title, '병원 방문하기');
   });
 
-  // 참고(이번 턴과 무관한 기존 버그): "친구"가 KoreanLocationService에 의해
-  // "친"+"구"(행정구역 접미사) 형태의 확실한 장소로 오인식되어 제목에서
-  // 빠집니다. 날짜(가장 가까운 미래의 금요일) 자체는 정확히 계산됩니다.
-  test('문장 4: 금요일에 친구 만나기 -> 일정 카드(날짜는 정확, 제목은 기존 장소 오인식의 영향을 받음)', () {
+  test('문장 4: 금요일에 친구 만나기 -> 일정 카드, 장소 없음, 제목에 "친구" 유지', () {
     final manager = managerAt(DateTime(2026, 7, 29));
     manager.handleUserText('금요일에 친구 만나기');
 
     expect(manager.currentDraft?.category, DraftCommandCategory.schedule);
     expect(manager.currentDraft?.date, '2026-07-31');
+    expect(manager.currentDraft?.location, isNull);
+    expect(manager.currentDraft?.title, '친구 만나기');
   });
 
   test('문장 5: 다음 주부터 매일 30분 걷기 -> 목표 분류 유지(일정으로 잘못 분류되지 않음)', () {

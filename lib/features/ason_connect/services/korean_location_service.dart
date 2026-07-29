@@ -136,11 +136,55 @@ class KoreanLocationService {
 
   // "읍/면/리"는 "정리"/"처리"/"관리"처럼 흔한 일반 단어와도 겹치기 쉬워
   // 앞에 최소 2글자 이상이 있을 때만 지역명으로 봅니다. 나머지 접미사는
-  // ("중구"처럼) 1글자 지명도 있어 그대로 둡니다.
+  // ("중구"처럼) 1글자 지명도 있어 일단 후보로 찾아두되, 실제로 장소로
+  // 인정할지는 아래 _isSafeSuffixMatch()에서 한 번 더 검사합니다.
   static final RegExp _suffixPattern = RegExp(
     '[가-힣A-Za-z0-9]{2,8}(?:읍|면|리)|'
     '[가-힣A-Za-z0-9]{1,8}(?:${[..._adminSuffixes.where((s) => s != '읍' && s != '면' && s != '리'), ..._landmarkSuffixes].join('|')})',
   );
+
+  // 접미사를 길이 내림차순으로 검사해야("특별시"를 "시"보다 먼저) 매치된
+  // 문자열이 실제로 어떤 접미사로 끝났는지 정확히 알 수 있습니다.
+  static final List<String> _suffixesByLength = [
+    ..._adminSuffixes.where((s) => s != '읍' && s != '면' && s != '리'),
+    ..._landmarkSuffixes,
+  ]..sort((a, b) => b.length.compareTo(a.length));
+
+  // "시/군/구/동"은 한 글자 어간과 결합해도 문법적으로 자연스러워
+  // "친구"(친+구)/"야구"(야+구)/"운동"(운+동)처럼 흔한 일반 단어와 자주
+  // 충돌합니다. 이 접미사들만 어간 길이 확인의 대상으로 삼습니다.
+  // ("읍/면/리"는 이미 정규식 자체가 2글자 이상을 요구해서 안전하고,
+  // "특별시"/"광역시" 같은 복합 접미사와 역/병원 등 시설 접미사는 한 글자와
+  // 우연히 겹칠 위험이 낮아 그대로 둡니다)
+  static const Set<String> _shortSuffixesRequiringCare = {'시', '군', '구', '동'};
+
+  // 한 글자 어간이라도 실제로 존재하는 행정구역이라 장소로 인정해야 하는
+  // 예외입니다(예: 중구/서구/동구/북구/남구, 강남 "영동" 지역). 새 예외
+  // 단어는 여기에만 추가하고, 일반적인 경우는 이 목록에 기대지 않도록
+  // 어간 길이 확인을 기본 규칙으로 둡니다.
+  static const Set<String> _shortStemAdminAreas = {
+    '중구',
+    '서구',
+    '동구',
+    '북구',
+    '남구',
+    '영동',
+  };
+
+  // 접미사 매칭 하나가 실제로 장소로 인정할 만큼 안전한지 확인합니다.
+  bool _isSafeSuffixMatch(String matched) {
+    final suffix = _suffixesByLength.firstWhere(
+      matched.endsWith,
+      orElse: () => '',
+    );
+    if (suffix.isEmpty || !_shortSuffixesRequiringCare.contains(suffix)) {
+      // 복합 접미사(특별시 등), 시설 접미사(역/병원 등), 이미 2글자 이상을
+      // 요구하는 읍/면/리는 기존 정책 그대로 안전하다고 봅니다.
+      return true;
+    }
+    final stem = matched.substring(0, matched.length - suffix.length);
+    return stem.length >= 2 || _shortStemAdminAreas.contains(matched);
+  }
 
   // 이름 없이 "병원"/"카페"처럼 종류만 언급된 경우를 찾습니다. 앞뒤에 한글이
   // 붙어 있으면(예: "지역"의 "역") 오탐이므로 제외합니다.
@@ -191,12 +235,20 @@ class KoreanLocationService {
     }
 
     // 2) 사전에 없으면 행정구역/장소 접미사 정규식으로 찾습니다. 예: 둔산동, 유성구, 강남역
+    // "친구"/"야구"처럼 한 글자 어간 + 시/군/구/동 조합은 일반 단어와 자주
+    // 겹치므로, 안전하다고 확인된(_isSafeSuffixMatch) 첫 번째 후보만
+    // 채택합니다. 문장 앞쪽의 후보가 일반 단어라서 걸러지더라도, 뒤쪽에
+    // 진짜 지역명이 있으면(예: "친구랑 중구에서") 그것을 찾아냅니다.
     if (base == null) {
-      final match = _suffixPattern.firstMatch(text);
-      if (match == null) return null;
-      base = match.group(0)!;
-      matchStart = match.start;
-      matchEnd = match.end;
+      for (final match in _suffixPattern.allMatches(text)) {
+        final candidateText = match.group(0)!;
+        if (!_isSafeSuffixMatch(candidateText)) continue;
+        base = candidateText;
+        matchStart = match.start;
+        matchEnd = match.end;
+        break;
+      }
+      if (base == null) return null;
     }
 
     // 3) 바로 뒤에 근처/앞/안/주변이 오면 장소 표현의 일부로 포함합니다.
