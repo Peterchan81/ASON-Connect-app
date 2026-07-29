@@ -4,6 +4,7 @@
 // 날짜/시간 추출과 내용 추출을 억지로 다른 파일로 나누지 않았습니다.
 
 import 'classification_scorer.dart';
+import 'date_expression_parser.dart';
 import 'korean_location_service.dart';
 import 'title_normalizer.dart';
 
@@ -39,10 +40,14 @@ class ScheduleExtraction {
 }
 
 class ScheduleFieldExtractor {
-  ScheduleFieldExtractor({KoreanLocationService? locationService})
-    : _locationService = locationService ?? KoreanLocationService();
+  ScheduleFieldExtractor({
+    KoreanLocationService? locationService,
+    DateExpressionParser? dateExpressionParser,
+  }) : _locationService = locationService ?? KoreanLocationService(),
+       _dateExpressionParser = dateExpressionParser ?? DateExpressionParser();
 
   final KoreanLocationService _locationService;
+  final DateExpressionParser _dateExpressionParser;
 
   // 분류 키워드 하나만 남고 실질적인 내용이 없는 경우입니다. (예: "미팅"만 남음)
   // "광고미팅"처럼 키워드가 다른 단어의 일부이면 실질적인 내용으로 봅니다.
@@ -98,6 +103,15 @@ class ScheduleFieldExtractor {
       if (dateMatch != null) {
         date = dateMatch.group(0)!;
         remaining = remaining.replaceFirst(dateMatch.group(0)!, ' ');
+      }
+    }
+    if (date == null) {
+      // "다음 주 월요일"/"이번 달 3일"/"금요일" 같은 상대 날짜 표현입니다.
+      // 계산에 실패하면(존재하지 않는 날짜 등) 원문을 그대로 둡니다.
+      final relativeMatch = _dateExpressionParser.extract(remaining);
+      if (relativeMatch != null) {
+        date = relativeMatch.formatted;
+        remaining = remaining.replaceFirst(relativeMatch.matchedText, ' ');
       }
     }
 

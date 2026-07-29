@@ -41,12 +41,8 @@ void main() {
     );
   });
 
-  // 참고: "다음 주 월요일" 같은 상대 날짜 표현은 ScheduleFieldExtractor의 날짜
-  // 인식 목록(오늘/내일/모레/어제, N월N일)에 원래부터 없어 이번 턴 이전부터도
-  // 인식되지 않았습니다(날짜 추출 규칙은 이번 턴에서 변경하지 않았습니다). 그
-  // 영향으로 일정 제목 앞에 "다음 주 월요일 에"가 남을 수 있어, 이 테스트는
-  // 이번 턴이 실제로 책임지는 부분(절 분리 개수/순서, 시간 추출, 목표/메모
-  // 제목 정규화)만 검증합니다.
+  // "다음 주 월요일" 같은 상대 날짜 표현은 DateExpressionParser(ASON Engine 상대
+  // 날짜 인식 1단계)가 실제 날짜로 계산해 제목에서 깨끗하게 빠집니다.
   test('문장 2: 일정 + 목표 + 메모 3개(반복 표현/요청 동사 변형)', () {
     final manager = ConversationManager();
     manager.handleUserText('다음 주 월요일 오전 10시에 은행에 가고 책을 매일 20분 읽고 계란 사는 것 적어줘');
@@ -59,8 +55,9 @@ void main() {
     ]);
 
     final schedule = manager.items[0].draft;
+    expect(schedule.date, isNotNull);
     expect(schedule.time, '오전 10시');
-    expect(schedule.title, contains('은행 가기'));
+    expect(schedule.title, '은행 가기');
 
     final goal = manager.items[1].draft;
     expect(goal.repeatOption, '매일');

@@ -2,6 +2,7 @@
 // 프로젝트/할 일)를 점수로 판단합니다. 실제 필드를 뽑아내는 일(ScheduleFieldExtractor,
 // HealthFieldExtractor)과는 분리된, "무엇으로 분류할지"만 담당하는 첫 단계입니다.
 
+import 'date_expression_parser.dart';
 import 'korean_location_service.dart';
 import '../models/draft_command.dart';
 
@@ -32,10 +33,14 @@ class ClassificationResult {
 }
 
 class ClassificationScorer {
-  ClassificationScorer({KoreanLocationService? locationService})
-    : _locationService = locationService ?? KoreanLocationService();
+  ClassificationScorer({
+    KoreanLocationService? locationService,
+    DateExpressionParser? dateExpressionParser,
+  }) : _locationService = locationService ?? KoreanLocationService(),
+       _dateExpressionParser = dateExpressionParser ?? DateExpressionParser();
 
   final KoreanLocationService _locationService;
+  final DateExpressionParser _dateExpressionParser;
 
   // 분류에 사용하는 키워드입니다. 문장 형태(시간/장소/수치 패턴)와 함께 점수로 반영합니다.
   static const Map<DraftCommandCategory, List<String>> _keywords = {
@@ -168,6 +173,11 @@ class ClassificationScorer {
       case DraftCommandCategory.schedule:
         if (timePattern.hasMatch(text)) score += 2;
         if (_locationService.extractLocation(text).isConfident) score += 2;
+        // "다음 주 월요일"/"이번 달 3일"/"금요일"처럼 구체적인 날짜를 콕
+        // 집어 말하면 일정 신호로 봅니다. 다만 이것만으로 무조건 일정이
+        // 되는 것은 아니고(다른 카테고리 점수와 합산해서 비교), "다음
+        // 주부터"처럼 요일/일자가 없는 막연한 표현은 매칭되지 않습니다.
+        if (_dateExpressionParser.extract(text) != null) score += 2;
         break;
       case DraftCommandCategory.health:
         if (_weightPattern.hasMatch(text) ||

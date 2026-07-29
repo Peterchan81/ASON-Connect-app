@@ -15,6 +15,7 @@
 
 import 'classification_scorer.dart';
 import 'content_normalizer.dart';
+import 'date_expression_parser.dart';
 import 'field_correction_parser.dart';
 import 'health_field_extractor.dart';
 import 'korean_location_service.dart';
@@ -27,13 +28,19 @@ export 'health_field_extractor.dart' show HealthExtraction;
 export 'schedule_field_extractor.dart' show ScheduleExtraction;
 
 class CommandParserService {
-  CommandParserService({KoreanLocationService? locationService})
-    : _scorer = ClassificationScorer(locationService: locationService),
-      _scheduleExtractor = ScheduleFieldExtractor(
-        locationService: locationService,
-      ),
-      _healthExtractor = const HealthFieldExtractor(),
-      _correctionParser = const FieldCorrectionParser();
+  CommandParserService({
+    KoreanLocationService? locationService,
+    DateTime Function()? nowProvider,
+  }) : _scorer = ClassificationScorer(
+         locationService: locationService,
+         dateExpressionParser: DateExpressionParser(nowProvider: nowProvider),
+       ),
+       _scheduleExtractor = ScheduleFieldExtractor(
+         locationService: locationService,
+         dateExpressionParser: DateExpressionParser(nowProvider: nowProvider),
+       ),
+       _healthExtractor = const HealthFieldExtractor(),
+       _correctionParser = const FieldCorrectionParser();
 
   final ClassificationScorer _scorer;
   final ScheduleFieldExtractor _scheduleExtractor;

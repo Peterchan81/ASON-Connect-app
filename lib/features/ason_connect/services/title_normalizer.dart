@@ -18,19 +18,25 @@ class TitleNormalizer {
   /// 일정/나의 하루 목표: 마지막 단어가 "-고"로 끝나면(연결형) "-기"(명사형)로
   /// 바꿉니다. "-고"는 동사 어간에 그대로 붙는 어미라서 "-기"로 바꿔도 어간은
   /// 그대로입니다("가고"→"가기", "걷고"→"걷기", "만나고"→"만나기",
-  /// "하고"→"하기"). "-고"로 끝나지 않으면(이미 정리된 문장이면) 손대지
-  /// 않습니다.
+  /// "하고"→"하기"). 사용자가 이미 "-기"(예: "은행에 가기")로 말한 경우도
+  /// 같은 방식으로 앞 단어의 조사만 정리합니다. 둘 중 어디에도 해당하지
+  /// 않으면(예: 이미 정리된 명사, 다른 어미로 끝남) 손대지 않습니다.
   static String normalizeActionTitle(String text) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return text;
 
     final words = trimmed.split(RegExp(r'\s+'));
     final lastWord = words.last;
-    if (lastWord.length < 2 || !lastWord.endsWith('고')) {
+    final endsWithConnective = lastWord.length >= 2 && lastWord.endsWith('고');
+    final endsWithNounForm = lastWord.length >= 2 && lastWord.endsWith('기');
+    if (!endsWithConnective && !endsWithNounForm) {
       return text;
     }
 
-    words[words.length - 1] = '${lastWord.substring(0, lastWord.length - 1)}기';
+    if (endsWithConnective) {
+      words[words.length - 1] =
+          '${lastWord.substring(0, lastWord.length - 1)}기';
+    }
 
     // 동사 앞 단어(들)에 남은 조사는 짧은 제목에서는 보통 생략되므로 걷어냅니다.
     for (var i = 0; i < words.length - 1; i++) {

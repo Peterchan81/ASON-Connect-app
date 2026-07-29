@@ -49,6 +49,23 @@ void main() {
     });
   });
 
+  group('normalizeActionTitle — 이미 "-기"로 끝난 경우도 조사를 정리한다', () {
+    test('은행에 가기 -> 은행 가기', () {
+      expect(TitleNormalizer.normalizeActionTitle('은행에 가기'), '은행 가기');
+    });
+
+    test('책을 20분 읽기 -> 책 20분 읽기', () {
+      expect(TitleNormalizer.normalizeActionTitle('책을 20분 읽기'), '책 20분 읽기');
+    });
+
+    test('조사가 없으면 그대로 둔다', () {
+      expect(
+        TitleNormalizer.normalizeActionTitle('거래처 담당자 만나기'),
+        '거래처 담당자 만나기',
+      );
+    });
+  });
+
   group('normalizeActionTitle — 과도한 변환 방지', () {
     test('"-고"로 끝나지 않으면 원문을 그대로 돌려준다', () {
       expect(
