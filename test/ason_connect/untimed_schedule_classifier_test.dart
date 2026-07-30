@@ -109,6 +109,57 @@ void main() {
     }
   });
 
+  // 실제 사용 시 나올 법한 문장을 ClassificationScorer(=실제 파이프라인)로
+  // 검증해 찾아낸 오분류 사례입니다. UntimedScheduleClassifier의 보너스가
+  // 완전히 사라져 다른 카테고리로 정확히 넘어가는 경우만 end-to-end로
+  // 검증합니다(기본 일정 키워드 '방문'/'예약' 자체가 주는 점수까지는 이
+  // 클래스의 책임 범위 밖이라 아래 scoreBonus 단위 테스트에서 별도로
+  // 다룹니다).
+  group('실제 입력 검증: 이미 끝난 일(과거 완료형) -> 일정으로 잘못 분류되지 않음', () {
+    test('지난주에 은행에서 서류를 제출했다 -> 일정이 아님', () {
+      final result = scorer.classify('지난주에 은행에서 서류를 제출했다');
+      final wronglySchedule =
+          result.best == DraftCommandCategory.schedule &&
+          !result.isUnclassified;
+      expect(wronglySchedule, isFalse);
+    });
+  });
+
+  group('실제 입력 검증: "시간을 보내다"(발송이 아닌 관용구) -> 메모로 정리된다', () {
+    const sentences = [
+      '오늘 하루를 즐겁게 보내기',
+      '가족과 좋은 시간을 보내기',
+      '주말을 편안하게 보내기',
+    ];
+
+    for (final sentence in sentences) {
+      test('$sentence -> 메모', () {
+        final result = scorer.classify(sentence);
+        expect(result.best, DraftCommandCategory.memo);
+      });
+    }
+
+    // "택배 보내기"처럼 실제 발송 용무는 여전히 일정으로 유지되어야 합니다.
+    test('택배 보내기 -> 일정(회귀 확인)', () {
+      final result = scorer.classify('택배 보내기');
+      expect(result.best, DraftCommandCategory.schedule);
+    });
+  });
+
+  group('실제 입력 검증: 질문/검토 중 표현 -> 일정으로 잘못 분류되지 않음', () {
+    const sentences = ['서류 제출 방법이 뭐지', '신청 자격이 되는지 확인 중'];
+
+    for (final sentence in sentences) {
+      test('$sentence -> 일정이 아님', () {
+        final result = scorer.classify(sentence);
+        final wronglySchedule =
+            result.best == DraftCommandCategory.schedule &&
+            !result.isUnclassified;
+        expect(wronglySchedule, isFalse);
+      });
+    }
+  });
+
   group('UntimedScheduleClassifier.scoreBonus (단위 테스트)', () {
     const classifier = UntimedScheduleClassifier();
 
@@ -139,6 +190,37 @@ void main() {
     test('용무 표현도 날짜 표현도 없으면 보너스가 0이다', () {
       expect(classifier.scoreBonus('오늘 기분이 좋았다'), 0);
       expect(classifier.scoreBonus('안녕하세요'), 0);
+    });
+
+    // 실제 입력 검증에서 새로 찾은 오분류 사례: 이미 끝난 일(과거 완료형)
+    test('이미 끝난 일(과거 완료형)이면 보너스가 0이다', () {
+      expect(classifier.scoreBonus('어제 병원에 방문했다'), 0);
+      expect(classifier.scoreBonus('지난주에 은행에서 서류를 제출했다'), 0);
+    });
+
+    // 실제 입력 검증에서 새로 찾은 오분류 사례: "시간을 보내다" 관용구
+    test('"시간을 보내다" 관용구면 보너스가 0이다', () {
+      expect(classifier.scoreBonus('오늘 하루를 즐겁게 보내기'), 0);
+      expect(classifier.scoreBonus('가족과 좋은 시간을 보내기'), 0);
+      expect(classifier.scoreBonus('주말을 편안하게 보내기'), 0);
+      // 실제 발송 용무는 계속 보너스를 받아야 합니다.
+      expect(classifier.scoreBonus('택배 보내기'), greaterThan(0));
+    });
+
+    // 실제 입력 검증에서 새로 찾은 오분류 사례: 아직 결정되지 않은 질문/검토
+    test('질문/검토 중 표현이면 보너스가 0이다', () {
+      expect(classifier.scoreBonus('병원 예약이 필요할까?'), 0);
+      expect(classifier.scoreBonus('서류 제출 방법이 뭐지'), 0);
+      expect(classifier.scoreBonus('신청 자격이 되는지 확인 중'), 0);
+    });
+
+    // 실제 입력 검증에서 새로 찾은 오분류 사례: 기록/문서를 가리키는 명사구
+    test('기록/문서를 가리키는 명사구로 끝나면 보너스가 0이다', () {
+      expect(classifier.scoreBonus('병원 방문 기록'), 0);
+      expect(classifier.scoreBonus('예약 확인 문자'), 0);
+      // "마감일"은 여전히 일정과 관련이 있어 보너스 대상에서 제외하지
+      // 않았습니다(의도적으로 유지).
+      expect(classifier.scoreBonus('서류 제출 마감일'), greaterThan(0));
     });
   });
 

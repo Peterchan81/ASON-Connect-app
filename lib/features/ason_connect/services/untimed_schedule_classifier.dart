@@ -30,6 +30,33 @@ class UntimedScheduleClassifier {
     r'고\s*싶|아이디어|생각|언젠가|알아보기|고민|계획',
   );
 
+  // 이미 끝난 일(과거 완료형으로 끝나는 문장)입니다. "어제 병원에 방문했다"/
+  // "지난주에 서류를 제출했다"처럼 이미 다녀온 일을 보고하는 문장은 앞으로
+  // 처리해야 할 용무가 아니므로 보너스를 주지 않습니다(일기에 더 가깝습니다).
+  static final RegExp _completedPastActionPattern = RegExp(
+    r'(았다|었다|했다)\s*[.!?]*$',
+  );
+
+  // "하루를/시간을/주말을 (편안하게) 보내기"처럼 "보내다"가 "시간을 보내다"
+  // (시간을 보내는) 뜻으로 쓰인 경우입니다. "택배 보내기"의 "보내다"(발송)와
+  // 달리 이건 용무가 아니라 바람에 가까워 보너스를 주지 않습니다.
+  static final RegExp _timeSpendingIdiomPattern = RegExp(
+    r'(하루|시간|주말|휴일|연휴)\s*(을|를)?.{0,10}보내',
+  );
+
+  // 아직 결정되지 않은 질문·고민 표현입니다("~필요할까?", "~방법이 뭐지",
+  // "확인 중"). 확정된 용무가 아니라 아직 검토 중인 내용이므로 보너스를
+  // 주지 않습니다.
+  static final RegExp _questionOrUncertainPattern = RegExp(
+    r'[?？]|(까|나요|뭐지|뭘까)\s*$|확인\s*중|검토\s*중',
+  );
+
+  // "OO 기록"/"OO 문자"처럼 처리할 용무가 아니라 이미 있는 기록·문서를
+  // 가리키는 명사구로 끝나는 경우입니다.
+  static final RegExp _recordOrDocumentNounPattern = RegExp(
+    r'(기록|내역|이력|목록|명단|문자|메일)\s*[.!?]*$',
+  );
+
   // 문장 어디에 있어도 되는, 목적지에 가거나 서류를 처리하는 대표적인 용무
   // 표현입니다("병원 가야 해", "은행에 서류 제출", "주민센터 방문" 등).
   static final RegExp _errandWordPattern = RegExp(
@@ -61,6 +88,10 @@ class UntimedScheduleClassifier {
     if (_repeatCuePattern.hasMatch(text)) return 0;
     if (_emotionPastPattern.hasMatch(text)) return 0;
     if (_hopeOrIdeaPattern.hasMatch(text)) return 0;
+    if (_completedPastActionPattern.hasMatch(text)) return 0;
+    if (_timeSpendingIdiomPattern.hasMatch(text)) return 0;
+    if (_questionOrUncertainPattern.hasMatch(text)) return 0;
+    if (_recordOrDocumentNounPattern.hasMatch(text)) return 0;
 
     if (_errandWordPattern.hasMatch(text)) return 3;
     if (_errandEndingPattern.hasMatch(text)) return 3;
