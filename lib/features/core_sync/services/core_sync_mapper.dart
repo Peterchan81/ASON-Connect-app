@@ -26,6 +26,7 @@ import 'health_core_repository.dart';
 import 'memo_core_repository.dart';
 import 'project_core_repository.dart';
 import 'schedule_core_repository.dart';
+import 'supabase_sync_service.dart';
 
 /// [CoreSyncMapper.sync] 결과입니다. 성공/중복/실패를 구분해 화면이 알맞은
 /// 안내를 보여줄 수 있게 합니다.
@@ -58,12 +59,14 @@ class CoreSyncMapper {
     ProjectCoreRepository? projectRepository,
     GoalCoreRepository? goalRepository,
     DiaryCoreRepository? diaryRepository,
+    SupabaseSyncService? supabaseSyncService,
   }) : _scheduleRepository = scheduleRepository ?? ScheduleCoreRepository(),
        _memoRepository = memoRepository ?? MemoCoreRepository(),
        _healthRepository = healthRepository ?? HealthCoreRepository(),
        _projectRepository = projectRepository ?? ProjectCoreRepository(),
        _goalRepository = goalRepository ?? GoalCoreRepository(),
-       _diaryRepository = diaryRepository ?? DiaryCoreRepository();
+       _diaryRepository = diaryRepository ?? DiaryCoreRepository(),
+       _supabaseSyncService = supabaseSyncService ?? SupabaseSyncService();
 
   final ScheduleCoreRepository _scheduleRepository;
   final MemoCoreRepository _memoRepository;
@@ -71,6 +74,11 @@ class CoreSyncMapper {
   final ProjectCoreRepository _projectRepository;
   final GoalCoreRepository _goalRepository;
   final DiaryCoreRepository _diaryRepository;
+  // 로컬 저장이 끝난 뒤 같은 데이터를 Supabase에도 추가로 남기는 보조
+  // 경로입니다. 이 서비스의 모든 메서드는 내부에서 오류를 삼키므로(자세한
+  // 설명은 supabase_sync_service.dart 참고), 여기서 별도로 try/catch하지
+  // 않아도 로컬 저장 결과(CoreSyncResult)에 영향을 주지 않습니다.
+  final SupabaseSyncService _supabaseSyncService;
 
   static const List<String> _memoIdeaCategory = ['아이디어'];
 
@@ -106,21 +114,31 @@ class CoreSyncMapper {
           return const CoreSyncResult.duplicate('이미 동일한 일정이 있습니다.');
         }
         await _scheduleRepository.upsert(entry);
+        // 로컬 저장이 이미 끝난 뒤에만 시도합니다 — Supabase 실패가 위의
+        // upsert 성공 여부에 영향을 주지 않습니다.
+        await _supabaseSyncService.insertSchedule(entry);
       case DraftCommandCategory.memo:
-        await _memoRepository.upsert(_toMemoModel(id, draft));
+        final memo = _toMemoModel(id, draft);
+        await _memoRepository.upsert(memo);
+        await _supabaseSyncService.insertMemo(memo);
       case DraftCommandCategory.health:
         await _healthRepository.upsert(_toHealthEntry(id, draft));
       case DraftCommandCategory.project:
         await _projectRepository.upsert(_toProjectEntry(id, draft));
       case DraftCommandCategory.dailyGoal:
-        await _goalRepository.upsert(_toGoalEntry(id, draft));
+        final goal = _toGoalEntry(id, draft);
+        await _goalRepository.upsert(goal);
+        await _supabaseSyncService.insertGoal(goal);
       case DraftCommandCategory.diary:
         // id 기반으로 저장합니다: 같은 draft(같은 id)를 수정 후 다시 동기화해도
         // 줄이 중복으로 늘어나지 않고 그 줄만 최신 내용으로 바뀝니다.
-        await _diaryRepository.upsert(
-          FieldNormalizer.resolveDate(draft.date),
-          id,
-          (draft.title ?? '-').trim(),
+        final diaryDate = FieldNormalizer.resolveDate(draft.date);
+        final diaryContent = (draft.title ?? '-').trim();
+        await _diaryRepository.upsert(diaryDate, id, diaryContent);
+        await _supabaseSyncService.insertDiaryEntry(
+          id: id,
+          date: diaryDate,
+          content: diaryContent,
         );
     }
     return const CoreSyncResult.success();

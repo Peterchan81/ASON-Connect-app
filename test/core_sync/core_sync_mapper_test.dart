@@ -8,8 +8,20 @@ import 'package:ason_voice_app/features/core_sync/services/health_core_repositor
 import 'package:ason_voice_app/features/core_sync/services/memo_core_repository.dart';
 import 'package:ason_voice_app/features/core_sync/services/project_core_repository.dart';
 import 'package:ason_voice_app/features/core_sync/services/schedule_core_repository.dart';
+import 'package:ason_voice_app/features/core_sync/services/supabase_sync_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _ThrowingInserter implements SupabaseRowInserter {
+  final List<String> attemptedTables = [];
+
+  @override
+  Future<void> insert(String table, Map<String, dynamic> row) async {
+    attemptedTables.add(table);
+    throw Exception('Supabase에 연결할 수 없습니다(테스트용 실패)');
+  }
+}
 
 void main() {
   setUp(() {
@@ -166,5 +178,58 @@ void main() {
     final saved = await MemoCoreRepository().loadAll();
     expect(saved, hasLength(1));
     expect(saved.single.content, '수정된 내용');
+  });
+
+  group('Supabase insert 실패는 로컬 저장에 영향을 주지 않는다', () {
+    setUp(() {
+      dotenv.testLoad(
+        fileInput:
+            'SUPABASE_URL=https://example.supabase.co\n'
+            'SUPABASE_ANON_KEY=test-anon-key',
+      );
+    });
+
+    test('일정: Supabase insert가 실패해도 로컬 scheduleByDate에는 정상 저장된다', () async {
+      final inserter = _ThrowingInserter();
+      final mapper = CoreSyncMapper(
+        supabaseSyncService: SupabaseSyncService(inserter: inserter),
+      );
+      final draft = DraftCommand(
+        originalText: '내일 병원 예약',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.schedule,
+        date: '내일',
+        time: '오후 3시',
+        title: '병원 예약',
+      );
+
+      final result = await mapper.sync(draft);
+
+      expect(result.isSuccess, isTrue);
+      expect(inserter.attemptedTables, contains('schedules'));
+      final saved = await ScheduleCoreRepository().loadAll();
+      expect(saved, hasLength(1));
+      expect(saved.single.title, '병원 예약');
+    });
+
+    test('메모: Supabase insert가 실패해도 로컬 MemoModel에는 정상 저장된다', () async {
+      final inserter = _ThrowingInserter();
+      final mapper = CoreSyncMapper(
+        supabaseSyncService: SupabaseSyncService(inserter: inserter),
+      );
+      final draft = DraftCommand(
+        originalText: '메모가 있어',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.memo,
+        title: '우유 사기',
+      );
+
+      final result = await mapper.sync(draft);
+
+      expect(result.isSuccess, isTrue);
+      expect(inserter.attemptedTables, contains('memos'));
+      final saved = await MemoCoreRepository().loadAll();
+      expect(saved, hasLength(1));
+    });
   });
 }
