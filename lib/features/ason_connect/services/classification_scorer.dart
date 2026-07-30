@@ -60,7 +60,16 @@ class ClassificationScorer {
       '방문',
       '예약',
     ],
-    DraftCommandCategory.memo: ['메모', '기억', '적어', '기록', '사야', '구매', '아이디어'],
+    DraftCommandCategory.memo: [
+      '메모',
+      '기억',
+      '적어',
+      '기록',
+      '사야',
+      '구매',
+      '아이디어',
+      '저장',
+    ],
     DraftCommandCategory.health: [
       '몸무게',
       '체중',
@@ -107,8 +116,11 @@ class ClassificationScorer {
   );
 
   // 다이어리의 핵심 신호인, 하루를 돌아보는 과거형 감정 표현입니다.
+  // "즐거운/좋은/행복한 시간을 보냈다"처럼 감정 형용사가 "보내다"와 함께
+  // 쓰이는 관용구도 실제로 아주 흔해서 함께 인식합니다.
   static final RegExp _emotionPastPattern = RegExp(
-    r'좋았|나빴|힘들었|즐거웠|행복했|슬펐|속상했|피곤했|괜찮았|재밌었|재미있었',
+    r'좋았|나빴|힘들었|즐거웠|행복했|슬펐|속상했|피곤했|괜찮았|재밌었|재미있었|'
+    r'(즐거운|좋은|행복한)\s*시간을?\s*보냈',
   );
 
   // "정리해 두기"/"견적서 보내기"처럼, 날짜·시간·반복 없이 한 번만 처리하면
@@ -120,8 +132,11 @@ class ClassificationScorer {
 
   // 일정의 시간 표현과 건강의 운동 표현은 분류 점수 계산과 필드 추출(ScheduleFieldExtractor,
   // HealthFieldExtractor) 양쪽에서 함께 쓰이므로, 이 클래스에서 공개 상수로 관리합니다.
+  // 숫자("3시")뿐 아니라 음성 인식에 흔한 한글 숫자("세 시")도 인식합니다.
+  // "한 시간"처럼 시각이 아니라 소요 시간(알림 등)을 말할 때의 "시간"과
+  // 헷갈리지 않도록 뒤에 "간"이 오면 매칭하지 않습니다.
   static final RegExp timePattern = RegExp(
-    r'(오전|오후)?\s*\d{1,2}시(\s*\d{1,2}분)?',
+    r'(오전|오후)?\s*(\d{1,2}|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열)\s*시(?!간)(\s*\d{1,2}분)?',
   );
   static final RegExp exercisePattern = RegExp(
     r'(\d+\s*(분|시간))\s*(간\s*)?(걸었|걷|운동|뛰었|뛰|탔)',
@@ -143,6 +158,17 @@ class ClassificationScorer {
   static final RegExp _glucosePattern = RegExp(r'혈당[^0-9]{0,5}\d+');
   static final RegExp _purchasePrepPattern = RegExp(
     r'(사야|구매|준비해|기억해|적어|기록해|해야)',
+  );
+
+  // "3월 15일" 같은 절대 달력 날짜 표현입니다. 상대 날짜(DateExpressionParser)와
+  // 달리 이 표현은 ScheduleFieldExtractor가 원문 그대로 필드에 채우기만 해서
+  // 여태 분류 점수에는 전혀 반영되지 않았습니다("3월 15일에 계약서 서명"처럼
+  // 시간·용무 동사 신호가 없는 문장이 통째로 미분류가 되는 원인이었습니다).
+  // "오늘"/"내일"/"어제"는 일부러 제외했습니다 — 다이어리 문장("오늘 기분이
+  // 좋았다")에도 아주 흔하게 등장해서, 점수를 주면 다이어리와 불필요하게
+  // 경쟁하게 됩니다.
+  static final RegExp _absoluteCalendarDatePattern = RegExp(
+    r'\d{1,2}월\s*\d{1,2}일',
   );
 
   /// 문장을 읽고 가장 유력한 카테고리(와 다음으로 유력한 카테고리)를 점수와 함께 돌려줍니다.
@@ -171,8 +197,12 @@ class ClassificationScorer {
     // 명사구는 "방문"/"예약" 같은 일정 키워드가 우연히 있어도 일정으로 보지
     // 않습니다(예: "어제 병원에 방문했다", "병원 예약이 필요할까?", "병원
     // 방문 기록"). 키워드 점수만 깎으면 부족해서(그래도 다른 신호가 없으면
-    // 여전히 일정으로 뽑힘), 일정 카테고리 전체 점수를 0으로 둡니다.
-    if (category == DraftCommandCategory.schedule &&
+    // 여전히 일정으로 뽑힘), 일정 카테고리 전체 점수를 0으로 둡니다. "할 일"도
+    // 같은 이유로 같이 막습니다 — "서류를 제출해야 하나?"/"예약해야 할지
+    // 고민이다"처럼 "해야"가 할 일 키워드와 우연히 겹쳐 물음표가 있어도
+    // 확정된 할 일로 잘못 뽑히는 사례가 반복됐습니다.
+    if ((category == DraftCommandCategory.schedule ||
+            category == DraftCommandCategory.todo) &&
         _untimedScheduleClassifier.isUnlikelyToBeSchedule(text)) {
       return 0;
     }
@@ -194,6 +224,9 @@ class ClassificationScorer {
         // 되는 것은 아니고(다른 카테고리 점수와 합산해서 비교), "다음
         // 주부터"처럼 요일/일자가 없는 막연한 표현은 매칭되지 않습니다.
         if (_dateExpressionParser.extract(text) != null) score += 2;
+        // "3월 15일"처럼 절대 달력 날짜를 콕 집어 말한 경우도 일정 신호로
+        // 봅니다.
+        if (_absoluteCalendarDatePattern.hasMatch(text)) score += 2;
         // "병원 가야 해"/"세차 맡기기"처럼 시각·날짜 표현이 없어도, 한 번
         // 처리하면 끝나는 용무성 행동이면 일정 신호로 봅니다(반복/과거감정/
         // 희망 표현이 있으면 0점이라 다른 카테고리를 밀어내지 않습니다).
@@ -209,7 +242,15 @@ class ClassificationScorer {
         }
         break;
       case DraftCommandCategory.memo:
-        if (_purchasePrepPattern.hasMatch(text)) score += 2;
+        // "서류를 제출해야 하나?"처럼 구매/준비 동사 패턴(사야/해야 등)이
+        // 질문·고민 표현과 겹치면 아직 확정된 메모가 아니므로 점수를 주지
+        // 않습니다. ("OO 기록"처럼 기록·문서 명사구는 메모 본연의 신호라
+        // isQuestionOrUncertain에는 포함하지 않았습니다 — 계속 점수를
+        // 받아야 합니다)
+        if (_purchasePrepPattern.hasMatch(text) &&
+            !_untimedScheduleClassifier.isQuestionOrUncertain(text)) {
+          score += 2;
+        }
         if (!_repeatCuePattern.hasMatch(text) &&
             _bareActionTaskPattern.hasMatch(text)) {
           score += 2;

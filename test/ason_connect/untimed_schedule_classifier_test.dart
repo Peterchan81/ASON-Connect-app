@@ -273,6 +273,33 @@ void main() {
       // 않았습니다(의도적으로 유지).
       expect(classifier.scoreBonus('서류 제출 마감일'), greaterThan(0));
     });
+
+    // 150+ 문장 종합 검증(natural_language_classification_validation_test.dart)에서
+    // 찾은 놓친 용무 표현들입니다. "택배 보내기"처럼 이미 있던 목록에 자연스러운
+    // 동의어/관용구만 추가했습니다.
+    test('세탁소 들르기/보험 갱신하기/은행 갔다 오기도 용무로 인식한다', () {
+      expect(classifier.scoreBonus('세탁소 들르기'), greaterThan(0));
+      expect(classifier.scoreBonus('자동차 보험 갱신하기'), greaterThan(0));
+      expect(classifier.scoreBonus('보험 갱신'), greaterThan(0));
+      expect(classifier.scoreBonus('은행 갔다 오기'), greaterThan(0));
+    });
+
+    test('"가야" 뿐 아니라 "보내야"도 의무형 용무로 인식한다', () {
+      expect(classifier.scoreBonus('택배 좀 보내야 하는데'), greaterThan(0));
+    });
+
+    test('"OO한테/에게/께 전화"처럼 동사 없이 사람+전화만 있어도 용무로 인식한다', () {
+      expect(classifier.scoreBonus('엄마한테 전화'), greaterThan(0));
+      expect(classifier.scoreBonus('어머니께 전화'), greaterThan(0));
+    });
+
+    // isQuestionOrUncertain은 ClassificationScorer가 메모의 구매/준비 동사
+    // 점수를 질문 표현에서 깎는 데도 쓰입니다.
+    test('isQuestionOrUncertain이 질문/고민 표현을 가려낸다', () {
+      expect(classifier.isQuestionOrUncertain('서류를 제출해야 하나?'), isTrue);
+      expect(classifier.isQuestionOrUncertain('예약해야 할지 고민이다'), isTrue);
+      expect(classifier.isQuestionOrUncertain('우유 사야 해'), isFalse);
+    });
   });
 
   group('ConversationManager 수준 통합 확인', () {
