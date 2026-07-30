@@ -4,6 +4,8 @@
 
 import 'package:ason_voice_app/features/ason_connect/models/draft_command.dart';
 import 'package:ason_voice_app/features/core_sync/services/core_sync_mapper.dart';
+import 'package:ason_voice_app/features/core_sync/services/diary_core_repository.dart';
+import 'package:ason_voice_app/features/core_sync/services/goal_core_repository.dart';
 import 'package:ason_voice_app/features/core_sync/services/health_core_repository.dart';
 import 'package:ason_voice_app/features/core_sync/services/memo_core_repository.dart';
 import 'package:ason_voice_app/features/core_sync/services/project_core_repository.dart';
@@ -22,6 +24,21 @@ class _ThrowingInserter implements SupabaseRowInserter {
     throw Exception('Supabase에 연결할 수 없습니다(테스트용 실패)');
   }
 }
+
+class _FakeUserIdProvider implements SupabaseUserIdProvider {
+  _FakeUserIdProvider({this.userId});
+
+  String? userId;
+  Object? errorToThrow;
+
+  @override
+  String? get currentUserId {
+    if (errorToThrow != null) throw errorToThrow!;
+    return userId;
+  }
+}
+
+const _fakeLoggedInUserId = 'test-user-uuid-1234';
 
 void main() {
   setUp(() {
@@ -192,7 +209,14 @@ void main() {
     test('일정: Supabase insert가 실패해도 로컬 scheduleByDate에는 정상 저장된다', () async {
       final inserter = _ThrowingInserter();
       final mapper = CoreSyncMapper(
-        supabaseSyncService: SupabaseSyncService(inserter: inserter),
+        supabaseSyncService: SupabaseSyncService(
+          inserter: inserter,
+          // 로그인 상태를 가정해야 insert가 실제로 시도되고(그리고
+          // 실패하고) 이 테스트가 의도한 경로를 검증합니다. 로그인하지
+          // 않은 상태의 검증은 아래 "로그인 세션이 없어도..." 그룹에서
+          // 따로 합니다.
+          userIdProvider: _FakeUserIdProvider(userId: _fakeLoggedInUserId),
+        ),
       );
       final draft = DraftCommand(
         originalText: '내일 병원 예약',
@@ -215,7 +239,10 @@ void main() {
     test('메모: Supabase insert가 실패해도 로컬 MemoModel에는 정상 저장된다', () async {
       final inserter = _ThrowingInserter();
       final mapper = CoreSyncMapper(
-        supabaseSyncService: SupabaseSyncService(inserter: inserter),
+        supabaseSyncService: SupabaseSyncService(
+          inserter: inserter,
+          userIdProvider: _FakeUserIdProvider(userId: _fakeLoggedInUserId),
+        ),
       );
       final draft = DraftCommand(
         originalText: '메모가 있어',
@@ -230,6 +257,117 @@ void main() {
       expect(inserter.attemptedTables, contains('memos'));
       final saved = await MemoCoreRepository().loadAll();
       expect(saved, hasLength(1));
+    });
+  });
+
+  group('로그인 세션이 없어도(비로그인) 로컬 저장은 정상적으로 진행된다', () {
+    setUp(() {
+      // .env는 설정돼 있지만(Supabase 자체는 켜져 있지만) 로그인 세션이
+      // 없는, 실제로 가장 흔한 상태를 재현합니다.
+      dotenv.testLoad(
+        fileInput:
+            'SUPABASE_URL=https://example.supabase.co\n'
+            'SUPABASE_ANON_KEY=test-anon-key',
+      );
+    });
+
+    CoreSyncMapper loggedOutMapper() => CoreSyncMapper(
+      supabaseSyncService: SupabaseSyncService(
+        inserter: _ThrowingInserter(), // 호출되면 안 되므로, 호출되면 즉시 실패해야 알아챌 수 있게 일부러 예외를 던지는 걸 씁니다.
+        userIdProvider: _FakeUserIdProvider(userId: null),
+      ),
+    );
+
+    test('일정: user_id가 없어도 로컬 저장은 성공한다', () async {
+      final draft = DraftCommand(
+        originalText: '내일 병원 예약',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.schedule,
+        date: '내일',
+        time: '오후 3시',
+        title: '병원 예약',
+      );
+
+      final result = await loggedOutMapper().sync(draft);
+
+      expect(result.isSuccess, isTrue);
+      expect(await ScheduleCoreRepository().loadAll(), hasLength(1));
+    });
+
+    test('목표: user_id가 없어도 로컬 todayGoals에는 정상 저장된다', () async {
+      final draft = DraftCommand(
+        originalText: '매일 30분 걷기',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.dailyGoal,
+        title: '매일 30분 걷기',
+      );
+
+      final result = await loggedOutMapper().sync(draft);
+
+      expect(result.isSuccess, isTrue);
+      final saved = await GoalCoreRepository().loadAll();
+      expect(saved, hasLength(1));
+      expect(saved.single.title, '매일 30분 걷기');
+    });
+
+    test('다이어리: user_id가 없어도 로컬 diaryEntries에는 정상 저장된다', () async {
+      final draft = DraftCommand(
+        originalText: '오늘 기분이 좋았다',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.diary,
+        date: '오늘',
+        title: '오늘 기분이 좋았다',
+      );
+
+      final result = await loggedOutMapper().sync(draft);
+
+      expect(result.isSuccess, isTrue);
+      final saved = await DiaryCoreRepository().loadForDate(DateTime.now());
+      expect(saved, isNotNull);
+    });
+
+    test('메모: user_id가 없어도 로컬 MemoModel에는 정상 저장된다', () async {
+      final draft = DraftCommand(
+        originalText: '우유 사기',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.memo,
+        title: '우유 사기',
+      );
+
+      final result = await loggedOutMapper().sync(draft);
+
+      expect(result.isSuccess, isTrue);
+      expect(await MemoCoreRepository().loadAll(), hasLength(1));
+    });
+  });
+
+  group('user_id 조회 중 예외가 발생해도 앱 흐름과 로컬 저장은 유지된다', () {
+    test('SupabaseUserIdProvider가 예외를 던져도 일정은 정상적으로 로컬 저장된다', () async {
+      dotenv.testLoad(
+        fileInput:
+            'SUPABASE_URL=https://example.supabase.co\n'
+            'SUPABASE_ANON_KEY=test-anon-key',
+      );
+      final mapper = CoreSyncMapper(
+        supabaseSyncService: SupabaseSyncService(
+          inserter: _ThrowingInserter(),
+          userIdProvider: _FakeUserIdProvider()
+            ..errorToThrow = StateError('세션 조회 실패(테스트용)'),
+        ),
+      );
+      final draft = DraftCommand(
+        originalText: '내일 병원 예약',
+        status: DraftCommandStatus.ready,
+        category: DraftCommandCategory.schedule,
+        date: '내일',
+        time: '오후 3시',
+        title: '병원 예약',
+      );
+
+      final result = await mapper.sync(draft);
+
+      expect(result.isSuccess, isTrue);
+      expect(await ScheduleCoreRepository().loadAll(), hasLength(1));
     });
   });
 }

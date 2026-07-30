@@ -11,12 +11,12 @@
 // 데이터는 이미 안전하게 저장되어 있어야 하기 때문입니다.
 //
 // 컬럼명은 docs/CORE_CONNECT_SHARED_SCHEMA.md를 그대로 따릅니다(임의 변경
-// 없음). user_id는 채우지 않습니다 — Connect는 아직 Supabase Auth 세션이
-// 없어(문서의 "Phase 2 이전에 확인이 필요한 전제" 참고) 신뢰할 수 있는
-// user_id를 만들 수 없고, 잘못된 값을 지어내는 것은 이번 작업의 "임시 변환
-// 금지" 원칙에 어긋납니다. user_id 없이 보낸 insert는 RLS 정책상 대부분
-// 거부되겠지만, 그 실패도 이 서비스 안에서 조용히 처리됩니다(Phase 2에서
-// 두 앱의 로그인 흐름이 Supabase Auth 세션을 만들도록 확장되면 채워질 예정).
+// 없음). user_id는 로그인된 Supabase Auth 세션이 있을 때만 채웁니다(현재
+// currentUser.id를 그대로 사용 — 절대 임의로 만들어내지 않습니다). 세션이
+// 없으면(Connect는 아직 카카오/구글 로그인 UI가 없어 대부분 이 상태입니다)
+// user_id 없는 payload를 보내지 않고 insert 자체를 생략합니다 — RLS 정책상
+// user_id 없는 insert는 거부될 것이 확실하고, 무엇보다 "user_id 없는
+// payload는 보내지 않는다"는 이번 작업의 원칙이기도 합니다.
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -46,11 +46,37 @@ class _RealSupabaseRowInserter implements SupabaseRowInserter {
   }
 }
 
+/// 현재 로그인된 Supabase Auth 사용자의 id만 알려주는 최소 인터페이스입니다.
+/// `SupabaseSyncService`가 Supabase Auth SDK 세부사항에 직접 묶이지 않도록,
+/// 그리고 테스트에서 실제 세션 없이도 "로그인된 것처럼"/"로그아웃된 것처럼"
+/// 가정해볼 수 있도록 분리했습니다.
+abstract interface class SupabaseUserIdProvider {
+  String? get currentUserId;
+}
+
+class _AuthSupabaseUserIdProvider implements SupabaseUserIdProvider {
+  const _AuthSupabaseUserIdProvider();
+
+  @override
+  String? get currentUserId {
+    try {
+      // Supabase.initialize()가 호출된 적이 없으면(예: .env 없음) 여기서
+      // 예외가 날 수 있습니다 — 호출하는 쪽(_resolveUserId)이 항상
+      // try/catch로 감싸므로 앱이 죽지 않습니다.
+      return Supabase.instance.client.auth.currentUser?.id;
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 class SupabaseSyncService {
-  SupabaseSyncService({SupabaseRowInserter? inserter})
-    : _inserter = inserter ?? const _RealSupabaseRowInserter();
+  SupabaseSyncService({SupabaseRowInserter? inserter, SupabaseUserIdProvider? userIdProvider})
+    : _inserter = inserter ?? const _RealSupabaseRowInserter(),
+      _userIdProvider = userIdProvider ?? const _AuthSupabaseUserIdProvider();
 
   final SupabaseRowInserter _inserter;
+  final SupabaseUserIdProvider _userIdProvider;
 
   static const String _sourceApp = 'connect';
   static const int _initialSyncVersion = 1;
@@ -86,8 +112,23 @@ class SupabaseSyncService {
     return '$y-$m-$d';
   }
 
+  /// 로그인된 사용자의 id를 안전하게 가져옵니다. 세션이 없거나 조회 중
+  /// 오류가 나면(예: Supabase 미초기화) null을 돌려줍니다 — 절대 예외를
+  /// 던지지 않고, userId 값 자체나 세션 내용을 로그로 남기지 않습니다.
+  String? _resolveUserId() {
+    try {
+      return _userIdProvider.currentUserId;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 오류를 항상 이 안에서 처리합니다. 호출한 쪽은 결과를 기다릴 필요도,
   /// try/catch할 필요도 없습니다 — 이 메서드는 절대 예외를 던지지 않습니다.
+  ///
+  /// 순서: ① .env 설정 확인 → ② 로그인 세션(user_id) 확인 → ③ insert 시도.
+  /// ①이나 ②에서 막히면 네트워크 호출 자체를 만들지 않고 이유를 로그로만
+  /// 남깁니다(로그아웃 상태는 오류가 아니라 정상적인 "로컬 전용" 상태입니다).
   Future<void> _safeInsert(String table, Map<String, dynamic> row) async {
     if (!isConfigured) {
       debugPrint(
@@ -96,8 +137,19 @@ class SupabaseSyncService {
       );
       return;
     }
+
+    final userId = _resolveUserId();
+    if (userId == null) {
+      debugPrint(
+        'SupabaseSyncService: 로그인된 Supabase 세션이 없어 "$table" '
+        'insert를 건너뜁니다(로컬 전용 상태로 취급 — 로컬 저장은 이미 '
+        '완료된 상태입니다).',
+      );
+      return;
+    }
+
     try {
-      await _inserter.insert(table, row);
+      await _inserter.insert(table, {...row, 'user_id': userId});
     } catch (error) {
       debugPrint(
         'SupabaseSyncService: "$table" insert 실패(로컬 저장에는 영향 없음): '
