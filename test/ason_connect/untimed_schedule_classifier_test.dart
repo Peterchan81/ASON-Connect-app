@@ -110,18 +110,53 @@ void main() {
   });
 
   // 실제 사용 시 나올 법한 문장을 ClassificationScorer(=실제 파이프라인)로
-  // 검증해 찾아낸 오분류 사례입니다. UntimedScheduleClassifier의 보너스가
-  // 완전히 사라져 다른 카테고리로 정확히 넘어가는 경우만 end-to-end로
-  // 검증합니다(기본 일정 키워드 '방문'/'예약' 자체가 주는 점수까지는 이
-  // 클래스의 책임 범위 밖이라 아래 scoreBonus 단위 테스트에서 별도로
-  // 다룹니다).
+  // 검증해 찾아낸 오분류 사례입니다. ClassificationScorer가 일정 카테고리를
+  // 채점할 때 UntimedScheduleClassifier.isUnlikelyToBeSchedule()을 먼저
+  // 확인해, 과거 완료형/질문·검토 중/기록 명사구면 기존 일정 키워드(방문/
+  // 예약 등)·시간·장소·날짜 점수까지 전부 주지 않으므로 unclassified가
+  // 되는지까지 end-to-end로 검증합니다. (모든 카테고리 점수가 0으로
+  // 동점이면 DraftCommandCategory가 열거형 선언 순서상 schedule을 먼저
+  // 나열해 best가 schedule로 나올 수 있으므로, "확신을 갖고 잘못 일정으로
+  // 판단했는지"만 의미 있게 검사합니다 — 위 "아이디어와 희망" 그룹과 같은
+  // 방식입니다.)
   group('실제 입력 검증: 이미 끝난 일(과거 완료형) -> 일정으로 잘못 분류되지 않음', () {
-    test('지난주에 은행에서 서류를 제출했다 -> 일정이 아님', () {
-      final result = scorer.classify('지난주에 은행에서 서류를 제출했다');
-      final wronglySchedule =
-          result.best == DraftCommandCategory.schedule &&
-          !result.isUnclassified;
-      expect(wronglySchedule, isFalse);
+    const sentences = [
+      '지난주에 은행에서 서류를 제출했다',
+      '어제 병원에 방문했다',
+      '회의 다녀왔습니다',
+      '서류 제출했습니다',
+      '병원 방문했습니다',
+      '예약 시스템이 새로 생겼다',
+    ];
+
+    for (final sentence in sentences) {
+      test('$sentence -> 일정이 아님', () {
+        final result = scorer.classify(sentence);
+        final wronglySchedule =
+            result.best == DraftCommandCategory.schedule &&
+            !result.isUnclassified;
+        expect(wronglySchedule, isFalse);
+      });
+    }
+  });
+
+  group('실제 입력 검증: 질문/검토 중 표현이 일정 키워드와 함께 있어도 일정이 아님', () {
+    const sentences = ['병원 예약이 필요할까?', '예약 확인 문자'];
+
+    for (final sentence in sentences) {
+      test('$sentence -> 일정이 아님', () {
+        final result = scorer.classify(sentence);
+        final wronglySchedule =
+            result.best == DraftCommandCategory.schedule &&
+            !result.isUnclassified;
+        expect(wronglySchedule, isFalse);
+      });
+    }
+
+    // "마감일"은 일정과 실제로 관련 있어 의도적으로 계속 일정으로 남습니다.
+    test('서류 제출 마감일 -> 일정 유지(의도적, 회귀 확인)', () {
+      final result = scorer.classify('서류 제출 마감일');
+      expect(result.best, DraftCommandCategory.schedule);
     });
   });
 
@@ -192,10 +227,26 @@ void main() {
       expect(classifier.scoreBonus('안녕하세요'), 0);
     });
 
-    // 실제 입력 검증에서 새로 찾은 오분류 사례: 이미 끝난 일(과거 완료형)
+    // 실제 입력 검증에서 새로 찾은 오분류 사례: 이미 끝난 일(과거 완료형).
+    // 격식체(-습니다)와 불규칙 활용(왔다/겼다 등)까지 함께 확인합니다.
     test('이미 끝난 일(과거 완료형)이면 보너스가 0이다', () {
       expect(classifier.scoreBonus('어제 병원에 방문했다'), 0);
       expect(classifier.scoreBonus('지난주에 은행에서 서류를 제출했다'), 0);
+      expect(classifier.scoreBonus('회의 다녀왔습니다'), 0);
+      expect(classifier.scoreBonus('서류 제출했습니다'), 0);
+      expect(classifier.scoreBonus('예약 시스템이 새로 생겼다'), 0);
+    });
+
+    // isUnlikelyToBeSchedule은 scoreBonus뿐 아니라 ClassificationScorer가
+    // 일정 키워드/시간/장소/날짜 점수 전체를 주지 않을지 판단하는 데도
+    // 쓰이므로 이 메서드 자체도 직접 확인합니다.
+    test('isUnlikelyToBeSchedule이 과거 완료형/질문/기록 명사구를 정확히 가려낸다', () {
+      expect(classifier.isUnlikelyToBeSchedule('어제 병원에 방문했다'), isTrue);
+      expect(classifier.isUnlikelyToBeSchedule('회의 다녀왔습니다'), isTrue);
+      expect(classifier.isUnlikelyToBeSchedule('병원 예약이 필요할까?'), isTrue);
+      expect(classifier.isUnlikelyToBeSchedule('병원 방문 기록'), isTrue);
+      expect(classifier.isUnlikelyToBeSchedule('병원 가야 해'), isFalse);
+      expect(classifier.isUnlikelyToBeSchedule('세차 맡기기'), isFalse);
     });
 
     // 실제 입력 검증에서 새로 찾은 오분류 사례: "시간을 보내다" 관용구

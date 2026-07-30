@@ -167,6 +167,16 @@ class ClassificationScorer {
   }
 
   double _scoreFor(DraftCommandCategory category, String text) {
+    // 이미 끝난 일(과거 완료형)/아직 결정되지 않은 질문·검토 표현/기록·문서
+    // 명사구는 "방문"/"예약" 같은 일정 키워드가 우연히 있어도 일정으로 보지
+    // 않습니다(예: "어제 병원에 방문했다", "병원 예약이 필요할까?", "병원
+    // 방문 기록"). 키워드 점수만 깎으면 부족해서(그래도 다른 신호가 없으면
+    // 여전히 일정으로 뽑힘), 일정 카테고리 전체 점수를 0으로 둡니다.
+    if (category == DraftCommandCategory.schedule &&
+        _untimedScheduleClassifier.isUnlikelyToBeSchedule(text)) {
+      return 0;
+    }
+
     double score = 0;
 
     var keywordHits = 0;

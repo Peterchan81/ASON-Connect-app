@@ -31,10 +31,14 @@ class UntimedScheduleClassifier {
   );
 
   // 이미 끝난 일(과거 완료형으로 끝나는 문장)입니다. "어제 병원에 방문했다"/
-  // "지난주에 서류를 제출했다"처럼 이미 다녀온 일을 보고하는 문장은 앞으로
+  // "지난주에 서류를 제출했다"/"회의 다녀왔습니다"/"예약 시스템이 새로
+  // 생겼다"처럼 이미 다녀왔거나 이미 벌어진 일을 보고하는 문장은 앞으로
   // 처리해야 할 용무가 아니므로 보너스를 주지 않습니다(일기에 더 가깝습니다).
+  // 어간이 불규칙 활용으로 바뀌는 동사(오다→왔, 가다→갔, 주다→줬, 맡기다→
+  // 맡겼 등)까지 다 다루려고 어미 앞의 마지막 음절과 "다"/"습니다"(격식체)
+  // 종결을 따로 분리해 조합합니다.
   static final RegExp _completedPastActionPattern = RegExp(
-    r'(았다|었다|했다)\s*[.!?]*$',
+    r'(았|었|했|였|왔|갔|줬|봤|됐|폈|컸|겼)(다|습니다)\s*[.!?]*$',
   );
 
   // "하루를/시간을/주말을 (편안하게) 보내기"처럼 "보내다"가 "시간을 보내다"
@@ -82,16 +86,26 @@ class UntimedScheduleClassifier {
     r'(하기|보내기|만들기|전달하기|정리하기|확인하기|준비하기|처리하기|두기)\s*[.!?]*$',
   );
 
+  /// 이미 끝난 일(과거 완료형)/아직 결정되지 않은 질문·검토 표현/기록·문서를
+  /// 가리키는 명사구입니다. 이 중 하나라도 해당하면 "앞으로 처리할 용무"로
+  /// 보기 어려우므로, ClassificationScorer는 이 신호가 있을 때 일정의 기존
+  /// 키워드(방문/예약 등)·시간·장소·날짜 점수까지 전부 주지 않습니다(이
+  /// 신호들은 그 자체로 "일정이 아니다"를 뜻하지, 단지 용무 보너스만 깎는
+  /// 게 아니기 때문입니다).
+  bool isUnlikelyToBeSchedule(String text) {
+    return _completedPastActionPattern.hasMatch(text) ||
+        _questionOrUncertainPattern.hasMatch(text) ||
+        _recordOrDocumentNounPattern.hasMatch(text);
+  }
+
   /// 일정 점수에 더할 보너스를 계산합니다. 반복/과거감정/희망 신호가 있으면
   /// 항상 0입니다.
   double scoreBonus(String text) {
     if (_repeatCuePattern.hasMatch(text)) return 0;
     if (_emotionPastPattern.hasMatch(text)) return 0;
     if (_hopeOrIdeaPattern.hasMatch(text)) return 0;
-    if (_completedPastActionPattern.hasMatch(text)) return 0;
+    if (isUnlikelyToBeSchedule(text)) return 0;
     if (_timeSpendingIdiomPattern.hasMatch(text)) return 0;
-    if (_questionOrUncertainPattern.hasMatch(text)) return 0;
-    if (_recordOrDocumentNounPattern.hasMatch(text)) return 0;
 
     if (_errandWordPattern.hasMatch(text)) return 3;
     if (_errandEndingPattern.hasMatch(text)) return 3;
